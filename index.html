@@ -1028,6 +1028,43 @@ let gsUrl=localStorage.getItem('proper_gs_url')||'';
 let gsConnected=false;
 
 function normKey(v){ return String(v||'').trim().toLowerCase(); }
+
+// ── MACHINE KEY — mesmo algoritmo do campo ────────────────────────────────
+function machineKey(client, brand, model, serial){
+  const norm = v => String(v||'').trim().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]/g,'');
+  const parts = [norm(client), norm(brand), norm(model)];
+  const ser = norm(serial);
+  if(ser) parts.push(ser);
+  return 'MK-' + parts.join('-');
+}
+
+// ── findMachineByKey — busca por machine_key antes de serial/tag ──────────
+function findMachineByKey(mkId, client, brand, model, serial){
+  // 1. Busca direta pelo ID (machine_key ou EQ-)
+  if(mkId){
+    const byId = db.machines.find(m => String(m.id||'').trim() === mkId);
+    if(byId) return byId;
+  }
+  // 2. Tenta reconstruir a machine_key a partir dos dados e busca
+  const mk = machineKey(client, brand, model, serial);
+  const byMk = db.machines.find(m => String(m.id||'').trim() === mk);
+  if(byMk) return byMk;
+  // 3. Fallback: serial ou tag
+  const ser = normKey(serial);
+  if(ser) { const bySer = db.machines.find(m => normKey(m.serial) === ser); if(bySer) return bySer; }
+  // 4. Fallback: cliente + marca + modelo (sem série)
+  if(client && brand && model){
+    const nc=normKey(client), nb=normKey(brand), nm=normKey(model);
+    const byCombo = db.machines.find(m =>
+      normKey(m.client)===nc && normKey(m.brand)===nb && normKey(m.model)===nm
+    );
+    if(byCombo) return byCombo;
+  }
+  return null;
+}
+// ─────────────────────────────────────────────────────────────────────────
 function parseFlexibleDate(v){
   if(!v) return null;
   if(v instanceof Date && !isNaN(v)) return v;
@@ -2976,7 +3013,10 @@ async function syncFromGS(){
       const gsId     = String(sm['ID']||'').trim();
       const gsSerial = String(sm['Série']||'');
       const gsTag    = String(sm['TAG']||'');
-      let eq = findMachineByRefs(gsId, gsSerial, gsTag);
+      const gsClient = String(sm['Cliente']||'');
+      const gsBrand  = String(sm['Marca']||'');
+      const gsModel  = String(sm['Modelo']||'');
+      let eq = findMachineByKey(gsId, gsClient, gsBrand, gsModel, gsSerial);
       const newHour = parseInt(sm['Hor.Total'])||0;
 
       if(eq){
@@ -2994,7 +3034,7 @@ async function syncFromGS(){
         eq.obs      = sm['Observações'] || eq.obs      || '';
       } else if(sm['Cliente']||sm['Marca']||gsSerial||gsTag){
         db.machines.push({
-          id:        gsId||('EQ-'+Date.now()+'-'+Math.random().toString(36).slice(2,5)),
+          id:        gsId||machineKey(gsClient,gsBrand,gsModel,gsSerial)||('EQ-'+Date.now()),
           client:    sm['Cliente']    ||'',
           branch:    sm['Filial']     ||'',
           brand:     sm['Marca']      ||'',
@@ -3038,7 +3078,14 @@ async function syncFromGS(){
         return da - dbb;
       })
       .forEach(v=>{
-        const eq = findMachineByRefs(v.machine_id || v['Machine_ID'], v.serial || v['Série'] || v['Serial'], v.tag || v['TAG']);
+        const vMid    = v.machine_id || v['Machine_ID'] || '';
+        const vSerial = v.serial || v['Série'] || v['Serial'] || '';
+        const vTag    = v.tag    || v['TAG']   || '';
+        const vClient = v.client || v['Cliente'] || '';
+        const vBrand  = v.brand  || v['Marca']   || '';
+        const vModel  = v.model  || v['Modelo']  || '';
+        const eq = findMachineByKey(vMid, vClient, vBrand, vModel, vSerial)
+                || (vTag ? db.machines.find(m=>normKey(m.tag)===normKey(vTag)) : null);
         if(!eq) return;
         let touched = false;
         const visitHour = parseInt(v.hourTotal || v['Hor.Total']) || 0;
