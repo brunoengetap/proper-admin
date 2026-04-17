@@ -385,9 +385,41 @@ tr:hover td{background:var(--gray-50)}
   .form-row,.form-row3{grid-template-columns:1fr}
   .machines-grid{grid-template-columns:1fr}
 }
+
+/* ── LOGIN SCREEN ── */
+.login-overlay{display:flex;position:fixed;inset:0;background:#1a3a6b;z-index:9999;align-items:center;justify-content:center;padding:24px}
+.login-overlay.hidden{display:none}
+.login-box{background:white;border-radius:16px;padding:40px 36px;width:100%;max-width:380px;text-align:center;box-shadow:0 12px 48px rgba(0,0,0,.35)}
+.login-logo{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:4px}
+.login-logo-mark{width:38px;height:38px;background:var(--blue);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:white}
+.login-logo-text{font-size:18px;font-weight:700;color:var(--blue);font-family:'IBM Plex Sans',sans-serif}
+.login-sub{font-size:12px;color:var(--text2);margin-bottom:28px;margin-top:4px}
+.login-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;text-align:left;display:block;margin-bottom:6px}
+.login-input{width:100%;border:1.5px solid var(--border2);border-radius:var(--radius);padding:11px 14px;font-family:'IBM Plex Sans',sans-serif;font-size:18px;color:var(--text);background:var(--gray-50);outline:none;transition:border-color .15s;letter-spacing:4px;margin-bottom:12px}
+.login-input:focus{border-color:var(--blue-mid);background:white}
+.login-btn{width:100%;background:var(--blue);color:white;border:none;border-radius:var(--radius);padding:12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s;letter-spacing:.3px}
+.login-btn:hover{opacity:.88}
+.login-error{font-size:11px;color:var(--red);font-weight:600;min-height:16px;margin-top:8px}
 </style>
 </head>
 <body>
+
+
+<!-- ── TELA DE LOGIN ── -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-mark">PC</div>
+      <div class="login-logo-text">Proper Compressores</div>
+    </div>
+    <div class="login-sub">Catálogo Admin · v3.3 — Acesso restrito</div>
+    <label class="login-label">Senha de acesso</label>
+    <input class="login-input" type="password" id="loginInput" placeholder="••••••"
+           maxlength="20" onkeydown="if(event.key==='Enter')loginEntrar()">
+    <button class="login-btn" onclick="loginEntrar()">Entrar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
 
 <header class="app-header">
   <div class="logo-area">
@@ -1069,7 +1101,7 @@ async function syncToGS(action,payload){
   if(!gsUrl||!gsConnected) return;
   try{
     // Sem Content-Type: evita preflight CORS (Apps Script não responde OPTIONS)
-    await fetch(gsUrl,{method:'POST',body:JSON.stringify({action,...payload})});
+    await fetch(gsUrl,{method:'POST',body:JSON.stringify({action,key:_AUTH_HASH,...payload})});
   }catch(e){console.warn('GS sync',e)}
 }
 
@@ -2921,7 +2953,7 @@ async function syncFromGS(){
 
   // Helper: protege contra HTML de login retornado pelo Apps Script
   async function gsGet(action){
-    const r=await fetch(gsUrl+'?action='+action,{method:'GET'});
+    const r=await fetch(gsUrl+'?action='+action+'&key='+_AUTH_HASH,{method:'GET'});
     const txt=await r.text();
     if(txt.trim().startsWith('<')) throw new Error('Apps Script retornou HTML — publique o Web App para "Qualquer pessoa, sem necessidade de login"');
     return JSON.parse(txt);
@@ -3112,6 +3144,41 @@ window.addEventListener('storage', function(e){
     toast('↓ Dados atualizados pelo campo','info');
   }catch(err){ console.warn('storage sync:', err); }
 });
+
+
+// ── AUTH ──────────────────────────────────────────────────
+const _AUTH_KEY = 'proper_auth_ok';
+const _AUTH_HASH = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // sha256 de 123456
+
+async function loginHash(str){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function loginEntrar(){
+  const val = document.getElementById('loginInput').value;
+  const hash = await loginHash(val);
+  if(hash === _AUTH_HASH){
+    sessionStorage.setItem(_AUTH_KEY,'1');
+    document.getElementById('loginOverlay').classList.add('hidden');
+    document.getElementById('loginError').textContent='';
+  } else {
+    document.getElementById('loginError').textContent='Senha incorreta. Tente novamente.';
+    document.getElementById('loginInput').value='';
+    document.getElementById('loginInput').focus();
+  }
+}
+
+(async function loginCheck(){
+  if(sessionStorage.getItem(_AUTH_KEY)!=='1'){
+    document.getElementById('loginOverlay').classList.remove('hidden');
+    setTimeout(()=>document.getElementById('loginInput').focus(),200);
+  } else {
+    document.getElementById('loginOverlay').classList.add('hidden');
+  }
+})();
+// ── END AUTH ──────────────────────────────────────────────
+
 </script>
 </body>
 </html>
