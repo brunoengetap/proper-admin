@@ -2974,7 +2974,8 @@ function renderConfigStats(){
 // ═══════════════════════════════════════════════════════════
 async function syncFromGS(){
   if(!gsUrl||!gsConnected){
-    toast('Configure e conecte o Google Sheets primeiro','error'); return;
+    toast('Configure e conecte o Google Sheets primeiro','error');
+    return;
   }
 
   const el = document.getElementById('syncStatus');
@@ -2988,132 +2989,110 @@ async function syncFromGS(){
   setMsg('⏳ Sincronizando...','var(--blue-mid)');
   toast('Sincronizando...','');
 
-  // Helper: protege contra HTML de login retornado pelo Apps Script
   async function gsGet(action){
-    const r=await fetch(gsUrl+'?action='+action+'&key='+_AUTH_HASH,{method:'GET'});
-    const txt=await r.text();
-    if(txt.trim().startsWith('<')) throw new Error('Apps Script retornou HTML — publique o Web App para "Qualquer pessoa, sem necessidade de login"');
+    const r = await fetch(gsUrl + '?action=' + action + '&key=' + _AUTH_HASH, { method:'GET' });
+    const txt = await r.text();
+    if(txt.trim().startsWith('<')){
+      throw new Error('Apps Script retornou HTML — publique o Web App para "Qualquer pessoa, sem login"');
+    }
     return JSON.parse(txt);
   }
 
   try{
-    const dm = await gsGet('getMachines');
-    if(dm.status!=='ok') throw new Error('Erro ao buscar máquinas: '+(dm.error||''));
-    const sheetMachines = dm.machines||[];
-
-    const dp = await gsGet('getAllMachineParts');
-    const allMachineParts = dp.status==='ok' ? dp.parts||[] : [];
+    const dm = await gsGet('getMachinesWithParts');
+    if(dm.status !== 'ok') throw new Error('Erro ao buscar máquinas: ' + (dm.error || ''));
+    const sheetMachines = dm.machines || [];
 
     const dv = await gsGet('getVisits');
-    const visits = dv.status==='ok' ? dv.visits||[] : [];
+    const visits = dv.status === 'ok' ? dv.visits || [] : [];
 
-    let updMachines=0, newMachines=0, updParts=0, visitReconciled=0;
+    let updMachines = 0, newMachines = 0, updParts = 0, visitReconciled = 0;
 
-    sheetMachines.forEach(sm=>{
-      const gsId     = String(sm['ID']||'').trim();
-      const gsSerial = String(sm['Série']||'');
-      const gsTag    = String(sm['TAG']||'');
-      const gsClient = String(sm['Cliente']||'');
-      const gsBrand  = String(sm['Marca']||'');
-      const gsModel  = String(sm['Modelo']||'');
+    sheetMachines.forEach(sm => {
+      const gsId     = String(sm.id || sm.ID || '').trim();
+      const gsSerial = String(sm.serial || sm['Série'] || '');
+      const gsTag    = String(sm.tag || sm['TAG'] || '');
+      const gsClient = String(sm.client || sm['Cliente'] || '');
+      const gsBrand  = String(sm.brand || sm['Marca'] || '');
+      const gsModel  = String(sm.model || sm['Modelo'] || '');
       let eq = findMachineByKey(gsId, gsClient, gsBrand, gsModel, gsSerial);
-      const newHour = parseInt(sm['Hor.Total'])||0;
+      const newHour = parseInt(sm.hourTotal || sm['Hor.Total']) || 0;
 
       if(eq){
-        const prevHour = parseInt(eq.hourTotal)||0;
-        if(newHour > prevHour){ eq.hourTotal=newHour; updMachines++; }
-        if(sm['h/Semana']) eq.hpw = parseInt(sm['h/Semana'])||eq.hpw;
-        eq.client   = sm['Cliente']     || eq.client   || '';
-        eq.branch   = sm['Filial']      || eq.branch   || '';
-        eq.brand    = sm['Marca']       || eq.brand    || '';
-        eq.model    = sm['Modelo']      || eq.model    || '';
-        eq.serial   = gsSerial          || eq.serial   || '';
-        eq.tag      = gsTag             || eq.tag      || '';
-        eq.year     = sm['Ano']         || eq.year     || '';
-        eq.location = sm['Localização'] || eq.location || '';
-        eq.obs      = sm['Observações'] || eq.obs      || '';
-      } else if(sm['Cliente']||sm['Marca']||gsSerial||gsTag){
-        db.machines.push({
-          id:        gsId||machineKey(gsClient,gsBrand,gsModel,gsSerial)||('EQ-'+Date.now()),
-          client:    sm['Cliente']    ||'',
-          branch:    sm['Filial']     ||'',
-          brand:     sm['Marca']      ||'',
-          model:     sm['Modelo']     ||'',
-          serial:    gsSerial,
-          tag:       gsTag,
-          year:      sm['Ano']        ||'',
-          location:  sm['Localização']||'',
-          hourTotal: newHour,
-          hpw:       parseInt(sm['h/Semana'])||0,
-          obs:       sm['Observações']||'',
-          driveLink:'', photos:[], parts:{},
-          cnpj:'', contact:'', phone:'', email:'', city:'',
-        });
-        newMachines++;
-      }
-    });
+        const prevHour = parseInt(eq.hourTotal) || 0;
+        if(newHour > prevHour){ eq.hourTotal = newHour; updMachines++; }
 
-    allMachineParts.forEach(mp=>{
-      const mid = String(mp['Machine_ID']||'').trim();
-      const pid = String(mp['Part_ID']||'');
-      if(!pid) return;
-      const eq = findMachineByRefs(mid, mp['Serial']||'', mp['TAG']||'');
-      if(!eq) return;
-      if(!eq.parts) eq.parts={};
-      eq.parts[pid]={
-        name:       mp['Part_Name']||pid,
-        lastChange: parseInt(mp['Last_Change_H'])||0,
-        interval:   parseInt(mp['Interval_H'])||2000,
-        ref:        mp['Ref'] || eq.parts[pid]?.ref || '',
-        na:         String(mp['NA']||'').toUpperCase()==='SIM',
-      };
-      updParts++;
-    });
+        eq.client   = gsClient || eq.client || '';
+        eq.branch   = sm.branch || sm['Filial'] || eq.branch || '';
+        eq.brand    = gsBrand || eq.brand || '';
+        eq.model    = gsModel || eq.model || '';
+        eq.serial   = gsSerial || eq.serial || '';
+        eq.tag      = gsTag || eq.tag || '';
+        eq.year     = sm.year || sm['Ano'] || eq.year || '';
+        eq.location = sm.location || sm['Localização'] || eq.location || '';
+        eq.obs      = sm.obs || sm['Observações'] || eq.obs || '';
+        eq.hpw      = parseInt(sm.hpw || sm['h/Semana']) || eq.hpw || 0;
 
-    visits
-      .slice()
-      .sort((a,b)=>{
-        const da = parseFlexibleDate(a.visitDate || a['Data'] || a['Visit_Date']) || new Date(0);
-        const dbb = parseFlexibleDate(b.visitDate || b['Data'] || b['Visit_Date']) || new Date(0);
-        return da - dbb;
-      })
-      .forEach(v=>{
-        const vMid    = v.machine_id || v['Machine_ID'] || '';
-        const vSerial = v.serial || v['Série'] || v['Serial'] || '';
-        const vTag    = v.tag    || v['TAG']   || '';
-        const vClient = v.client || v['Cliente'] || '';
-        const vBrand  = v.brand  || v['Marca']   || '';
-        const vModel  = v.model  || v['Modelo']  || '';
-        const eq = findMachineByKey(vMid, vClient, vBrand, vModel, vSerial)
-                || (vTag ? db.machines.find(m=>normKey(m.tag)===normKey(vTag)) : null);
-        if(!eq) return;
-        let touched = false;
-        const visitHour = parseInt(v.hourTotal || v['Hor.Total']) || 0;
-        if(visitHour > (parseInt(eq.hourTotal)||0)){ eq.hourTotal = visitHour; touched = true; }
-        const visitHpw = parseInt(v.hpw || v['h/Semana']) || 0;
-        if(visitHpw){ eq.hpw = visitHpw; touched = true; }
-        const visitObs = v.generalObs || v['Observações'] || '';
-        if(visitObs){ eq.obs = visitObs; touched = true; }
-        const visitDate = dateOnlyISO(v.visitDate || v['Data'] || v['Visit_Date']);
-        if(visitDate){ eq.lastVisit = visitDate; touched = true; }
-        const visitParts = v.parts && typeof v.parts === 'object' ? v.parts : null;
-        if(visitParts){
+        if(sm.parts && typeof sm.parts === 'object'){
           if(!eq.parts) eq.parts = {};
-          Object.entries(visitParts).forEach(([pid, ps])=>{
-            const ex = eq.parts[pid] || {};
+          Object.entries(sm.parts).forEach(([pid, ps]) => {
             eq.parts[pid] = {
-              name: ps.name || ex.name || pid,
-              lastChange: ps.lastChange!==undefined ? parseInt(ps.lastChange)||0 : (ex.lastChange||0),
-              interval: ps.interval ? parseInt(ps.interval)||2000 : (ex.interval||2000),
-              ref: ps.ref || ex.ref || '',
-              na: ps.na!==undefined ? !!ps.na : !!ex.na,
+              name: ps.name || pid,
+              lastChange: parseInt(ps.lastChange) || 0,
+              interval: parseInt(ps.interval) || 2000,
+              ref: ps.ref || '',
+              na: !!ps.na
             };
             updParts++;
           });
-          touched = true;
         }
-        if(touched) visitReconciled++;
-      });
+      } else if(gsClient || gsBrand || gsSerial || gsTag){
+        db.machines.push({
+          id: gsId || machineKey(gsClient, gsBrand, gsModel, gsSerial) || ('EQ-' + Date.now()),
+          client: gsClient || '',
+          branch: sm.branch || sm['Filial'] || '',
+          brand: gsBrand || '',
+          model: gsModel || '',
+          serial: gsSerial,
+          tag: gsTag,
+          year: sm.year || sm['Ano'] || '',
+          location: sm.location || sm['Localização'] || '',
+          hourTotal: newHour,
+          hpw: parseInt(sm.hpw || sm['h/Semana']) || 0,
+          obs: sm.obs || sm['Observações'] || '',
+          driveLink:'', photos:[], parts: sm.parts || {},
+          cnpj:'', contact:'', phone:'', email:'', city:''
+        });
+        newMachines++;
+        updParts += Object.keys(sm.parts || {}).length;
+      }
+    });
+
+    visits.forEach(v => {
+      const vMid = String(v.machine_id || v['Machine_ID'] || '').trim();
+      const vSer = String(v.serial || v['Série'] || '').trim();
+      const vTag = String(v.tag || v['TAG'] || '').trim();
+
+      let eq = vMid ? db.machines.find(m => String(m.id || '').trim() === vMid) : null;
+      if(!eq && vSer) eq = db.machines.find(m => normKey(m.serial) === normKey(vSer));
+      if(!eq && vTag) eq = db.machines.find(m => normKey(m.tag) === normKey(vTag));
+      if(!eq) return;
+
+      let touched = false;
+      const visitHour = parseInt(v.hourTotal || v['Hor.Total']) || 0;
+      if(visitHour > (parseInt(eq.hourTotal) || 0)){ eq.hourTotal = visitHour; touched = true; }
+
+      const visitHpw = parseInt(v.hpw || v['h/Semana']) || 0;
+      if(visitHpw){ eq.hpw = visitHpw; touched = true; }
+
+      const visitObs = v.generalObs || v['Observações'] || '';
+      if(visitObs){ eq.obs = visitObs; touched = true; }
+
+      const visitDate = dateOnlyISO(v.visitDate || v['Data'] || v['Visit_Date']);
+      if(visitDate){ eq.lastVisit = visitDate; touched = true; }
+
+      if(touched) visitReconciled++;
+    });
 
     save();
 
@@ -3121,21 +3100,16 @@ async function syncFromGS(){
     else if(currentView==='machines')    renderMachines();
     else if(currentView==='preventivas') renderPreventivas();
     else if(currentView==='clients')     renderClients();
+    else if(currentView==='catalog')     renderCatalog();
 
-    const parts_txt = updParts>0 ? `, ${updParts} peça${updParts!==1?'s':''}` : '';
-    const new_txt   = newMachines>0 ? `, ${newMachines} máquina${newMachines!==1?'s':''} nova${newMachines!==1?'s':''}` : '';
-    const visit_txt = visitReconciled>0 ? `, ${visitReconciled} visita${visitReconciled!==1?'s':''} conciliada${visitReconciled!==1?'s':''}` : '';
-    const upd_txt   = updMachines>0 ? `${updMachines} horímetro${updMachines!==1?'s':''} atualizado${updMachines!==1?'s':''}` : 'Nenhuma alteração';
-    const msg = `✓ ${upd_txt}${parts_txt}${new_txt}${visit_txt} · ${visits.length} visita${visits.length!==1?'s':''}`;
-
+    const msg = `✓ ${updMachines} horímetro(s), ${updParts} peça(s), ${newMachines} máquina(s) nova(s), ${visitReconciled} visita(s) conciliada(s)`;
     setMsg(msg,'var(--green)');
     toast(msg,'success');
-    if(syncBtn){ syncBtn.textContent='↓ Sincronizar'; syncBtn.disabled=false; }
-
   }catch(e){
-    setMsg('❌ '+e.message,'var(--red)');
-    toast('Erro: '+e.message,'error');
+    setMsg('❌ ' + e.message,'var(--red)');
+    toast('Erro: ' + e.message,'error');
     console.error('syncFromGS:', e);
+  }finally{
     if(syncBtn){ syncBtn.textContent='↓ Sincronizar'; syncBtn.disabled=false; }
   }
 }
@@ -3191,6 +3165,15 @@ window.addEventListener('storage', function(e){
     toast('↓ Dados atualizados pelo campo','info');
   }catch(err){ console.warn('storage sync:', err); }
 });
+
+window.addEventListener('focus', function(){
+  if(gsUrl && gsConnected) syncFromGS();
+});
+
+setInterval(function(){
+  if(gsUrl && gsConnected) syncFromGS();
+}, 60000);
+
 
 
 // ── AUTH ──────────────────────────────────────────────────
