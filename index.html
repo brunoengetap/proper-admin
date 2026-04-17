@@ -1045,20 +1045,32 @@ function setGsStatus(state){
 }
 
 async function testGS(){
-  if(!gsUrl){setGsStatus('off');return}
+  if(!gsUrl){setGsStatus('off');return false}
   setGsStatus('connecting');
   try{
-    const r=await fetch(gsUrl+'?action=ping');
-    const d=await r.json();
+    // GET simples evita preflight CORS e não depende de sessão Google
+    const r=await fetch(gsUrl+'?action=ping',{method:'GET'});
+    const txt=await r.text();
+    // Proteção: Apps Script pode retornar HTML de login em vez de JSON
+    if(txt.trim().startsWith('<')){
+      console.warn('GS ping: resposta HTML (provável tela de login). Verifique se o Web App está publicado para "Qualquer pessoa".');
+      setGsStatus('off'); return false;
+    }
+    const d=JSON.parse(txt);
     if(d.status==='ok'){setGsStatus('connected');return true}
-    throw new Error(d.error||'err')
-  }catch(e){setGsStatus('off');return false}
+    throw new Error(d.error||'resposta inesperada')
+  }catch(e){
+    console.warn('testGS:', e.message);
+    setGsStatus('off'); return false;
+  }
 }
 
 async function syncToGS(action,payload){
   if(!gsUrl||!gsConnected) return;
-  try{await fetch(gsUrl,{method:'POST',body:JSON.stringify({action,...payload})})}
-  catch(e){console.warn('GS sync',e)}
+  try{
+    // Sem Content-Type: evita preflight CORS (Apps Script não responde OPTIONS)
+    await fetch(gsUrl,{method:'POST',body:JSON.stringify({action,...payload})});
+  }catch(e){console.warn('GS sync',e)}
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2907,18 +2919,23 @@ async function syncFromGS(){
   setMsg('⏳ Sincronizando...','var(--blue-mid)');
   toast('Sincronizando...','');
 
+  // Helper: protege contra HTML de login retornado pelo Apps Script
+  async function gsGet(action){
+    const r=await fetch(gsUrl+'?action='+action,{method:'GET'});
+    const txt=await r.text();
+    if(txt.trim().startsWith('<')) throw new Error('Apps Script retornou HTML — publique o Web App para "Qualquer pessoa, sem necessidade de login"');
+    return JSON.parse(txt);
+  }
+
   try{
-    const rm = await fetch(gsUrl+'?action=getMachines');
-    const dm = await rm.json();
+    const dm = await gsGet('getMachines');
     if(dm.status!=='ok') throw new Error('Erro ao buscar máquinas: '+(dm.error||''));
     const sheetMachines = dm.machines||[];
 
-    const rp = await fetch(gsUrl+'?action=getAllMachineParts');
-    const dp = await rp.json();
+    const dp = await gsGet('getAllMachineParts');
     const allMachineParts = dp.status==='ok' ? dp.parts||[] : [];
 
-    const rv = await fetch(gsUrl+'?action=getVisits');
-    const dv = await rv.json();
+    const dv = await gsGet('getVisits');
     const visits = dv.status==='ok' ? dv.visits||[] : [];
 
     let updMachines=0, newMachines=0, updParts=0, visitReconciled=0;
