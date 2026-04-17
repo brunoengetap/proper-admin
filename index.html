@@ -1,0 +1,3100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proper · Catálogo Admin v3.3</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root {
+  --blue:#1a3a6b; --blue-mid:#2E5BA8; --blue-light:#e8f0fb; --blue-pale:#f4f7fd;
+  --green:#1e7a42; --green-light:#e8f7ee;
+  --orange:#d97706; --orange-light:#fef3c7;
+  --red:#b91c1c; --red-light:#fee2e2;
+  --purple:#6c3a9e; --purple-light:#f3ecfc;
+  --gray-50:#f9fafb; --gray-100:#f3f4f6; --gray-200:#e5e7eb; --gray-300:#d1d5db;
+  --gray-500:#6b7280; --gray-700:#374151; --gray-900:#111827;
+  --text:#1a1e2e; --text2:#4b5563; --text3:#9ca3af;
+  --surface:#fff; --border:#e5e7eb; --border2:#d1d5db;
+  --radius:8px; --radius-lg:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 4px 16px rgba(0,0,0,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#eceff5;color:var(--text);font-size:13px;line-height:1.5;min-height:100vh}
+
+/* ── HEADER ── */
+.app-header{background:var(--blue);color:white;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;position:sticky;top:0;z-index:200;gap:12px;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.logo-area{display:flex;align-items:center;gap:10px}
+.logo-mark{width:30px;height:30px;background:rgba(255,255,255,.15);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;font-family:'IBM Plex Mono',monospace;color:white}
+.logo-text{font-size:14px;font-weight:700;color:white}
+.logo-sep{width:1px;height:16px;background:rgba(255,255,255,.25)}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.55)}
+.header-nav{display:flex;gap:2px}
+.nav-btn{background:none;border:none;cursor:pointer;font-size:12px;font-weight:500;color:rgba(255,255,255,.65);padding:6px 12px;border-radius:6px;transition:all .15s;font-family:'IBM Plex Sans',sans-serif;white-space:nowrap}
+.nav-btn:hover{background:rgba(255,255,255,.1);color:white}
+.nav-btn.active{background:rgba(255,255,255,.18);color:white}
+.header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.gs-status{display:flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);cursor:pointer;transition:all .15s;white-space:nowrap}
+.gs-dot{width:7px;height:7px;border-radius:50%;background:#6ee7b7;flex-shrink:0}
+.gs-dot.off{background:#f87171}
+.gs-dot.sync{background:#fbbf24;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── LAYOUT ── */
+.app-body{display:flex;min-height:calc(100vh - 52px)}
+.sidebar{width:250px;min-width:250px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:52px;height:calc(100vh - 52px);overflow:hidden}
+.main{flex:1;padding:18px;overflow-y:auto;min-width:0}
+
+/* ── SIDEBAR ── */
+.sidebar-top{padding:10px;border-bottom:1px solid var(--border)}
+.sidebar-tabs{display:flex;gap:2px;margin-bottom:8px}
+.stab{flex:1;background:var(--gray-100);border:none;border-radius:6px;padding:5px 4px;font-size:11px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;color:var(--text2);transition:all .15s}
+.stab.active{background:var(--blue-mid);color:white}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;width:13px;height:13px}
+.search-wrap input{width:100%;background:var(--gray-100);border:1px solid var(--border);border-radius:var(--radius);padding:7px 10px 7px 28px;font-size:12px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;outline:none;transition:border-color .15s}
+.search-wrap input:focus{border-color:var(--blue-mid);background:white}
+.search-wrap input::placeholder{color:var(--text3)}
+.sidebar-list{flex:1;overflow-y:auto;padding:4px}
+.sidebar-item{padding:8px 10px;border-radius:var(--radius);cursor:pointer;transition:background .12s;margin-bottom:1px;display:flex;align-items:flex-start;gap:8px}
+.sidebar-item:hover{background:var(--gray-100)}
+.sidebar-item.active{background:var(--blue-light)}
+.si-icon{width:30px;height:30px;border-radius:7px;background:var(--gray-200);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text2);flex-shrink:0;font-family:'IBM Plex Mono',monospace}
+.sidebar-item.active .si-icon{background:var(--blue-mid);color:white}
+.si-info{min-width:0}
+.si-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.si-meta{font-size:10px;color:var(--text3);margin-top:1px}
+.sidebar-item.active .si-name{color:var(--blue)}
+.sidebar-footer{padding:8px 10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.btn-new{width:100%;background:var(--blue);color:white;border:none;border-radius:var(--radius);padding:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-new:hover{opacity:.88}
+.btn-new.secondary{background:var(--gray-200);color:var(--text)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;border:none;border-radius:var(--radius);padding:7px 14px;font-size:12px;font-weight:500;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;transition:all .15s;white-space:nowrap}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--blue);color:white}
+.btn-primary:hover{background:var(--blue-mid)}
+.btn-secondary{background:white;color:var(--text);border:1px solid var(--border2)}
+.btn-secondary:hover{background:var(--gray-100)}
+.btn-danger{background:var(--red-light);color:var(--red);border:1px solid var(--red)}
+.btn-danger:hover{background:#fecaca}
+.btn-success{background:var(--green-light);color:var(--green);border:1px solid var(--green)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-xs{padding:2px 8px;font-size:10px}
+.btn-icon{width:28px;height:28px;border-radius:6px;background:none;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:var(--text2);transition:background .15s}
+.btn-icon:hover{background:var(--gray-100)}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.card+.card{margin-top:10px}
+
+/* ── HERO ── */
+.model-hero{background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:12px}
+.model-hero-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.model-hero-title{font-size:20px;font-weight:700;color:var(--text);line-height:1.2}
+.model-hero-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.chip-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--blue-light);color:var(--blue-mid)}
+.chip.gray{background:var(--gray-100);color:var(--text2)}
+.chip.green{background:var(--green-light);color:var(--green)}
+.chip.orange{background:var(--orange-light);color:var(--orange)}
+.chip.purple{background:var(--purple-light);color:var(--purple)}
+.hero-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:12px}
+.tab-btn{background:none;border:none;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);padding:8px 14px;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.tab-btn:hover:not(.active){color:var(--text)}
+.badge{display:inline-block;background:var(--gray-200);color:var(--text2);font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px;margin-left:5px}
+.tab-btn.active .badge{background:var(--blue-light);color:var(--blue-mid)}
+
+/* ── TABLE ── */
+.table-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);padding:7px 12px;border-bottom:1px solid var(--border);background:var(--gray-50)}
+td{padding:8px 12px;border-bottom:1px solid var(--gray-100);color:var(--text);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--gray-50)}
+.td-name{font-weight:500}
+.td-ref{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-top:1px}
+.td-obs{font-size:11px;color:var(--text2);font-style:italic;margin-top:2px}
+.td-supplier{display:inline-block;background:var(--gray-100);color:var(--text2);font-size:11px;padding:2px 7px;border-radius:4px}
+.td-qty{font-weight:600;color:var(--blue-mid)}
+.row-actions{display:flex;gap:3px;justify-content:flex-end}
+
+/* ── SUBSYSTEM ── */
+.sub-block{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:8px}
+.sub-head{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:var(--gray-50);cursor:pointer;user-select:none}
+.sub-head:hover{background:var(--gray-100)}
+.sub-head-left{display:flex;align-items:center;gap:8px}
+.sub-icon{width:22px;height:22px;background:var(--blue-light);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--blue-mid)}
+.sub-name{font-size:13px;font-weight:600;color:var(--text)}
+.sub-type{font-size:10px;color:var(--text3);background:var(--gray-200);padding:1px 7px;border-radius:10px;font-weight:600}
+.sub-count{font-size:10px;color:var(--text3);background:var(--gray-200);padding:1px 7px;border-radius:10px;font-weight:600}
+.sub-actions{display:flex;gap:4px;align-items:center}
+.chevron{font-size:9px;color:var(--text3);transition:transform .2s}
+.chevron.open{transform:rotate(90deg)}
+.sub-body{background:white}
+
+/* ── SEC HEADER ── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.sec-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)}
+
+/* ── PHOTOS ── */
+.photos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:8px}
+.photo-thumb{position:relative;aspect-ratio:1;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:var(--gray-100);cursor:pointer}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.photo-thumb .photo-label{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:white;font-size:9px;padding:3px 5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-thumb .photo-del{position:absolute;top:3px;right:3px;width:18px;height:18px;background:rgba(185,28,28,.85);color:white;border:none;border-radius:50%;font-size:10px;cursor:pointer;display:none;align-items:center;justify-content:center}
+.photo-thumb:hover .photo-del{display:flex}
+.btn-add-photo{aspect-ratio:1;border-radius:var(--radius);border:2px dashed var(--border2);background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text3);font-size:10px;font-weight:600;font-family:'IBM Plex Sans',sans-serif;transition:all .15s}
+.btn-add-photo:hover{border-color:var(--blue-mid);color:var(--blue-mid);background:var(--blue-pale)}
+.btn-add-photo svg{width:18px;height:18px}
+
+/* ── SIMILARITY BADGE ── */
+.sim-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.sim-tag{display:inline-flex;align-items:center;gap:3px;background:var(--purple-light);color:var(--purple);font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;cursor:pointer;transition:background .15s}
+.sim-tag:hover{background:#e4d4f7}
+.sim-tag .sim-rm{margin-left:2px;opacity:.6;font-size:12px}
+.sim-tag:hover .sim-rm{opacity:1}
+
+/* ── STATUS BADGE ── */
+.status-ok{background:var(--green-light);color:var(--green);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
+.status-warn{background:var(--orange-light);color:var(--orange);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
+.status-late{background:var(--red-light);color:var(--red);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
+.status-na{background:var(--gray-100);color:var(--text3);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-block}
+
+/* ── DUPLICATE ALERT ── */
+.dup-alert{background:#fffbeb;border:1px solid #fbbf24;border-radius:var(--radius);padding:12px;margin-bottom:12px;display:none}
+.dup-alert.show{display:block}
+.dup-alert-title{font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px}
+.dup-list{display:flex;flex-direction:column;gap:4px}
+.dup-item{display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid #fde68a;border-radius:6px;padding:7px 10px;font-size:11px;color:var(--text)}
+.dup-item-info{font-weight:600}
+.dup-actions{display:flex;gap:4px}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:36px 20px;color:var(--text3)}
+.empty-icon{font-size:30px;margin-bottom:8px;opacity:.35}
+.empty-title{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.empty-sub{font-size:12px}
+
+/* ── OVERLAYS & MODALS ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:300;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:white;border-radius:var(--radius-lg);padding:22px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.modal-lg{max-width:700px}
+.modal-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}
+
+/* ── FORMS ── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.form-group{margin-bottom:10px}
+.form-label{display:block;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.form-label span{font-weight:400;color:var(--text3);text-transform:none;letter-spacing:0;font-size:10px;margin-left:4px}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--gray-50);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:12px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;outline:none;transition:border-color .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--blue-mid);background:white}
+.form-textarea{resize:vertical;min-height:60px}
+.form-hint{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* ── MACHINES VIEW ── */
+.client-group{background:white;border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:10px;overflow:hidden}
+.client-group-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--gray-50);border-bottom:1px solid var(--border);cursor:pointer}
+.client-group-name{font-size:13px;font-weight:700;color:var(--blue)}
+.client-group-meta{font-size:11px;color:var(--text3)}
+.client-group-body{display:block}
+.client-group-body.hidden{display:none}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px}
+.stat-card{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.stat-val{font-size:24px;font-weight:700;color:var(--blue-mid);font-family:'IBM Plex Mono',monospace}
+.stat-lbl{font-size:11px;color:var(--text3);margin-top:2px;font-weight:500}
+
+/* ── GS CONFIG ── */
+.gs-panel{background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;margin-bottom:12px}
+.gs-url-row{display:flex;gap:8px}
+.gs-url-input{flex:1;background:var(--gray-50);border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:12px;color:var(--text);font-family:'IBM Plex Mono',monospace;outline:none}
+.gs-url-input:focus{border-color:var(--blue-mid);background:white}
+.gs-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.gs-step{display:flex;gap:10px;font-size:12px;color:var(--text2)}
+.gs-step-num{width:20px;height:20px;border-radius:50%;background:var(--blue-light);color:var(--blue);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.gs-step-text code{background:var(--gray-100);padding:1px 4px;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--blue)}
+.info-box{background:var(--orange-light);border-left:3px solid var(--orange);border-radius:0 var(--radius) var(--radius) 0;padding:9px 11px;font-size:11.5px;color:#92400e;line-height:1.6;margin-bottom:12px}
+.info-box strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--orange);margin-bottom:2px}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--gray-900);color:white;padding:9px 15px;border-radius:var(--radius);font-size:12px;font-weight:500;z-index:999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+.toast.info{background:var(--blue-mid)}
+
+/* ── LIGHTBOX ── */
+.lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox.open{display:flex}
+.lightbox img{max-width:90vw;max-height:90vh;border-radius:var(--radius);object-fit:contain}
+.lightbox-close{position:fixed;top:16px;right:20px;color:white;font-size:28px;cursor:pointer;background:none;border:none;line-height:1}
+
+/* ── MACHINES GRID ── */
+.machines-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.machine-card{background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;transition:box-shadow .15s;cursor:pointer}
+.machine-card:hover{box-shadow:var(--shadow-lg);border-color:var(--border2)}
+.mc-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--blue-light);color:var(--blue-mid);padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:6px}
+.mc-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px}
+.mc-client{font-size:11px;color:var(--text2);margin-bottom:8px}
+.mc-details{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.mc-detail{display:flex;flex-direction:column;gap:1px}
+.mc-detail-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.mc-detail-val{font-size:11px;color:var(--text);font-weight:600}
+.mc-hora{font-size:16px;font-weight:700;color:var(--blue-mid);font-family:'IBM Plex Mono',monospace}
+.mc-actions{margin-top:10px;display:flex;gap:5px;justify-content:flex-end;border-top:1px solid var(--gray-100);padding-top:8px}
+
+/* ── PHOTO SECTION ── */
+.photo-upload-area{border:2px dashed var(--border2);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all .15s}
+.photo-upload-area:hover,.photo-upload-area.drag{border-color:var(--blue-mid);background:var(--blue-pale)}
+.photo-upload-area p{font-size:12px;color:var(--text3);margin-top:4px}
+
+/* ── DETAIL PANEL ── */
+.detail-panel{background:var(--blue-pale);border:1px solid #c5d6f0;border-radius:var(--radius);padding:12px;margin-top:8px}
+.detail-panel-title{font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+
+/* ── STATUS BADGES ── */
+.badge-ok{display:inline-flex;align-items:center;gap:3px;background:#dcfce7;color:#15803d;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.badge-alerta{display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#b45309;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.badge-vencido{display:inline-flex;align-items:center;gap:3px;background:#fee2e2;color:#b91c1c;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.badge-na{display:inline-flex;align-items:center;gap:3px;background:var(--gray-100);color:var(--text3);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.badge-sem{display:inline-flex;align-items:center;gap:3px;background:var(--gray-100);color:var(--text3);font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px}
+
+/* ── ALERTA NO CARD DE MÁQUINA ── */
+.mc-alert-strip{display:flex;align-items:center;gap:5px;margin-top:7px;padding:4px 8px;border-radius:5px;font-size:10px;font-weight:700}
+.mc-alert-strip.vencido{background:#fee2e2;color:#b91c1c}
+.mc-alert-strip.alerta{background:#fef3c7;color:#b45309}
+.mc-alert-strip.faltando{background:var(--gray-100);color:var(--text3)}
+
+/* ── CLIENTS CRUD ── */
+.client-card{background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;transition:box-shadow .15s}
+.client-card:hover{box-shadow:var(--shadow-lg)}
+.client-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.client-card-name{font-size:15px;font-weight:700;color:var(--text)}
+.client-card-cnpj{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-top:1px}
+.client-card-body{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:11px;color:var(--text2)}
+.client-card-body a{color:var(--blue-mid);text-decoration:none}
+.client-card-body a:hover{text-decoration:underline}
+.client-card-footer{margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.client-alerta-badge{display:inline-flex;align-items:center;gap:4px;background:var(--orange-light);color:var(--orange);font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.clients-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+
+/* ── EDIÇÃO DE PEÇAS ── */
+.parts-edit-table{width:100%;border-collapse:collapse}
+.parts-edit-table th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);padding:5px 8px;border-bottom:1.5px solid var(--border);background:var(--gray-50);text-align:left}
+.parts-edit-table td{padding:5px 4px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+.parts-edit-table tr:last-child td{border-bottom:none}
+.parts-edit-table tr.part-na td:not(:first-child):not(:last-child){opacity:.35}
+.pe-input{width:100%;border:1.5px solid var(--border2);border-radius:5px;padding:4px 6px;font-size:12px;font-family:'IBM Plex Mono',monospace;background:var(--gray-50);color:var(--text);outline:none;transition:border-color .15s}
+.pe-input:focus{border-color:var(--blue-mid);background:white}
+.pe-na-btn{font-size:10px;font-weight:700;padding:3px 8px;border-radius:5px;border:1.5px solid var(--border2);background:white;color:var(--text3);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
+.pe-na-btn.active{background:var(--purple-light);border-color:var(--purple);color:var(--purple)}
+.pe-del-btn{font-size:11px;padding:3px 7px;border-radius:5px;border:1px solid var(--red);background:var(--red-light);color:var(--red);cursor:pointer;font-family:'IBM Plex Sans',sans-serif}
+.pe-add-row{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border2)}
+
+/* ── ABAS DO MODAL DE MÁQUINA ── */
+.mdet-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:14px}
+.mdet-tab{background:none;border:none;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);padding:8px 16px;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
+.mdet-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:700}
+.mdet-tab:hover:not(.active){color:var(--text)}
+.mdet-panel{display:none}.mdet-panel.active{display:block}
+
+/* ── DASHBOARD ── */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+.dash-card{background:white;border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
+.dash-card:hover{box-shadow:var(--shadow-lg);border-color:var(--border2);transform:translateY(-1px)}
+.dash-card-val{font-size:32px;font-weight:700;font-family:'IBM Plex Mono',monospace;line-height:1}
+.dash-card-lbl{font-size:11px;color:var(--text3);margin-top:4px;font-weight:500}
+.dash-card-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.dash-card.danger{border-left:4px solid var(--red)}
+.dash-card.danger .dash-card-val{color:var(--red)}
+.dash-card.warning{border-left:4px solid var(--orange)}
+.dash-card.warning .dash-card-val{color:var(--orange)}
+.dash-card.ok{border-left:4px solid var(--green)}
+.dash-card.ok .dash-card-val{color:var(--green)}
+.dash-card.info{border-left:4px solid var(--blue-mid)}
+.dash-card.info .dash-card-val{color:var(--blue-mid)}
+.dash-card-arrow{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text3);opacity:.4}
+
+/* ── PREVENTIVAS ── */
+.prev-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.prev-filter-btn{background:white;border:1px solid var(--border2);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;color:var(--text2);transition:all .15s;white-space:nowrap}
+.prev-filter-btn.active{background:var(--blue);color:white;border-color:var(--blue)}
+.prev-filter-btn.danger.active{background:var(--red);border-color:var(--red)}
+.prev-filter-btn.warning.active{background:var(--orange);border-color:var(--orange)}
+.prev-table{width:100%;border-collapse:collapse}
+.prev-table th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);padding:6px 10px;border-bottom:1.5px solid var(--border);background:var(--gray-50);text-align:left}
+.prev-table td{padding:7px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle;font-size:12px}
+.prev-table tr:hover td{background:var(--gray-50);cursor:pointer}
+.prev-table tr:last-child td{border-bottom:none}
+.prev-urgency-bar{width:4px;height:32px;border-radius:2px;flex-shrink:0}
+
+/* ── TABELA DENSA MÁQUINAS ── */
+.mach-table{width:100%;border-collapse:collapse}
+.mach-table th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);padding:6px 10px;border-bottom:1.5px solid var(--border);background:var(--gray-50);text-align:left;white-space:nowrap}
+.mach-table td{padding:6px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+.mach-table tr:hover td{background:var(--gray-50)}
+.mach-table tr:last-child td{border-bottom:none}
+.mach-client-badge{display:inline-block;font-size:10px;font-weight:700;background:var(--blue-light);color:var(--blue-mid);padding:1px 6px;border-radius:3px;margin-bottom:2px}
+.mach-model-name{font-size:12px;font-weight:600;color:var(--text)}
+.mach-meta{font-size:10px;color:var(--text3)}
+.mach-hora{font-size:13px;font-weight:700;color:var(--blue-mid);font-family:'IBM Plex Mono',monospace}
+
+/* ── STATS CLICÁVEIS ── */
+.stat-card{cursor:pointer;transition:all .15s}
+.stat-card:hover{box-shadow:var(--shadow-lg);border-color:var(--border2);transform:translateY(-1px)}
+.stat-card.active-filter{border-color:var(--blue-mid);background:var(--blue-pale)}
+.stat-card.active-filter .stat-val{color:var(--blue)}
+
+/* ── SIDEBAR OCULTA em views não-catálogo ── */
+.sidebar-hidden{display:none!important}
+
+/* ── CLIENTES TABELA ── */
+.client-table{width:100%;border-collapse:collapse}
+.client-table th{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);padding:7px 10px;border-bottom:1.5px solid var(--border);background:var(--gray-50);text-align:left;white-space:nowrap;cursor:pointer;user-select:none}
+.client-table th:hover{color:var(--text2)}
+.client-table th.sort-asc::after{content:' ↑';color:var(--blue-mid)}
+.client-table th.sort-desc::after{content:' ↓';color:var(--blue-mid)}
+.client-table td{padding:8px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle;font-size:12px}
+.client-table tr:last-child td{border-bottom:none}
+.client-table tr:hover td{background:var(--gray-50)}
+.client-status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+
+/* ── TOOLTIP ── */
+.tooltip-wrap{position:relative;display:inline-flex;align-items:center;gap:3px}
+.tooltip-icon{width:14px;height:14px;border-radius:50%;background:var(--gray-200);color:var(--text3);font-size:9px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;cursor:help;flex-shrink:0;font-style:normal}
+.tooltip-icon::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--gray-900);color:white;font-size:10px;font-weight:400;padding:5px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100;max-width:220px;white-space:normal;text-align:center;font-style:normal}
+.tooltip-icon:hover::after{opacity:1}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .app-body{flex-direction:column}
+  .sidebar{width:100%;min-width:0;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border)}
+  .sidebar-list{max-height:200px}
+  .form-row,.form-row3{grid-template-columns:1fr}
+  .machines-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo-area">
+    <div class="logo-mark">PC</div>
+    <div class="logo-text">Proper Compressores</div>
+    <div class="logo-sep"></div>
+    <div class="logo-sub">Admin v3.3</div>
+  </div>
+  <nav class="header-nav">
+    <button class="nav-btn active" onclick="showView('dashboard')" id="navDashboard">Dashboard</button>
+    <button class="nav-btn" onclick="showView('preventivas')" id="navPreventivas">Preventivas</button>
+    <button class="nav-btn" onclick="showView('machines')" id="navMachines">Máquinas PGP</button>
+    <button class="nav-btn" onclick="showView('catalog')" id="navCatalog">Catálogo</button>
+    <button class="nav-btn" onclick="showView('clients')" id="navClients">Clientes</button>
+    <button class="nav-btn" onclick="showView('config')" id="navConfig">Config.</button>
+  </nav>
+  <div class="header-right">
+    <div class="gs-status" id="gsStatus" onclick="showView('config')">
+      <div class="gs-dot off" id="gsDot"></div>
+      <span id="gsStatusText">Sem conexão</span>
+    </div>
+    <button id="btnSyncHeader" onclick="syncFromGS()" title="Sincronizar dados do campo"
+      style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.8);font-size:11px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;display:none">
+      ↓ Sincronizar
+    </button>
+  </div>
+</header>
+
+<div class="app-body">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px;padding:2px 2px 0">
+        Modelos de referência
+      </div>
+      <div class="search-wrap">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" placeholder="Buscar modelo..." id="sidebarSearch" oninput="filterSidebar(this.value)">
+      </div>
+    </div>
+    <div class="sidebar-list" id="sidebarList"></div>
+    <div class="sidebar-footer">
+      <button class="btn-new" id="sidebarNewBtn" onclick="openModalModel()">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+        <span id="sidebarNewLabel">Novo modelo</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="mainContent">
+    <!-- DASHBOARD VIEW -->
+    <div id="viewDashboard"></div>
+    <!-- PREVENTIVAS VIEW -->
+    <div id="viewPreventivas" style="display:none"></div>
+    <!-- CATALOG VIEW -->
+    <div id="viewCatalog" style="display:none"></div>
+    <!-- MACHINES VIEW -->
+    <div id="viewMachines" style="display:none"></div>
+    <!-- CLIENTS VIEW -->
+    <div id="viewClients" style="display:none"></div>
+    <!-- CONFIG VIEW -->
+    <div id="viewConfig" style="display:none"></div>
+  </main>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Modal: Modelo -->
+<div class="overlay" id="modalModel">
+  <div class="modal">
+    <div class="modal-title">⚙ <span id="modalModelTitle">Novo modelo de equipamento</span></div>
+    <div class="form-group">
+      <label class="form-label">Marca</label>
+      <input class="form-input" id="mBrand" placeholder="ex: Schulz, Atlas Copco, Techto">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Modelo / Referência</label>
+        <input class="form-input" id="mModel" placeholder="ex: SRP3010 III">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de equipamento</label>
+        <select class="form-select" id="mType">
+          <option>Compressor Parafuso</option><option>Compressor Pistão</option>
+          <option>Compressor Scroll</option><option>Compressor Centrífugo</option>
+          <option>Secador Frigorífico</option><option>Secador de Adsorção</option>
+          <option>Filtro de Linha</option><option>Vaso de Pressão</option><option>Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row3">
+      <div class="form-group">
+        <label class="form-label">Potência</label>
+        <input class="form-input" id="mPower" placeholder="ex: 10cv / 7,5kW">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pressão máx.</label>
+        <input class="form-input" id="mPressure" placeholder="ex: 10 bar">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Vazão (l/min)</label>
+        <input class="form-input" id="mFlow" placeholder="ex: 1150">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tensão elétrica</label>
+        <input class="form-input" id="mVoltage" placeholder="ex: 220/380V 3F">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Corrente (A)</label>
+        <input class="form-input" id="mAmpere" placeholder="ex: 28A">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Observações técnicas gerais</label>
+      <textarea class="form-textarea" id="mObs" placeholder="Versões, variações, avisos técnicos importantes..."></textarea>
+    </div>
+    <!-- Duplicate checker alert -->
+    <div class="dup-alert" id="dupModelAlert">
+      <div class="dup-alert-title">⚠ Modelos similares encontrados no catálogo:</div>
+      <div class="dup-list" id="dupModelList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalModel')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveModel()">Salvar modelo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Subsistema -->
+<div class="overlay" id="modalSub">
+  <div class="modal">
+    <div class="modal-title">🔩 <span id="modalSubTitle">Novo subsistema / conjunto</span></div>
+    <div class="form-group">
+      <label class="form-label">Nome do subsistema</label>
+      <input class="form-input" id="subName" placeholder="ex: Bloco Compressor, Quadro Elétrico, Sistema de Óleo">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select class="form-select" id="subCategory">
+          <option value="">Selecionar...</option>
+          <option>Unidade Compressora</option>
+          <option>Sistema de Lubrificação</option>
+          <option>Sistema de Resfriamento</option>
+          <option>Sistema de Controle</option>
+          <option>Quadro Elétrico / Motor</option>
+          <option>Sistema de Admissão e Filtração</option>
+          <option>Sistema Pneumático / Válvulas</option>
+          <option>Transmissão (correia/acoplamento)</option>
+          <option>Vedações e Juntas</option>
+          <option>Estrutura e Gabinete</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Intervalo base (h) <span>opcional</span></label>
+        <input class="form-input" type="number" id="subInterval" placeholder="ex: 8000">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descrição técnica</label>
+      <textarea class="form-textarea" id="subDesc" placeholder="Função do conjunto, componentes principais, avisos..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalSub')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSub()">Salvar subsistema</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Peça -->
+<div class="overlay" id="modalPart">
+  <div class="modal modal-lg">
+    <div class="modal-title">🔧 <span id="modalPartTitle">Nova peça</span></div>
+    <div class="form-group">
+      <label class="form-label">Nome da peça</label>
+      <input class="form-input" id="pName" placeholder="ex: Filtro de óleo, Separador ar/óleo, Vedação do eixo">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Código / Referência OEM</label>
+        <input class="form-input" id="pRef" placeholder="ex: 021.0076-0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Intervalo padrão (h)</label>
+        <input class="form-input" id="pInterval" type="number" min="0" placeholder="ex: 2000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Qtd por revisão</label>
+        <input class="form-input" id="pQty" type="number" min="1" value="1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fornecedor padrão</label>
+        <input class="form-input" id="pSupplier" placeholder="ex: Schulz, SKF, Gates">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Custo estimado (R$) <span>opcional</span></label>
+        <input class="form-input" id="pCost" type="number" min="0" step="0.01" placeholder="ex: 85.00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Criticidade</label>
+        <select class="form-select" id="pCriticality">
+          <option value="normal">Normal</option>
+          <option value="alta">Alta — parada imediata</option>
+          <option value="segurança">Segurança — NR12/NR13</option>
+        </select>
+      </div>
+    </div>
+    <!-- Similaridades -->
+    <div class="form-group">
+      <label class="form-label">Referências similares / compatíveis <span>pressione Enter para adicionar</span></label>
+      <div style="display:flex;gap:6px;margin-bottom:6px">
+        <input class="form-input" id="simInput" placeholder="Código similar ou genérico" onkeydown="if(event.key==='Enter'){event.preventDefault();addSim()}">
+        <button class="btn btn-secondary btn-sm" onclick="addSim()">+ Adicionar</button>
+      </div>
+      <div class="sim-row" id="simTags"></div>
+      <div class="form-hint">Use para registrar peças genéricas, reposições compatíveis ou equivalentes de outras marcas.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Observações técnicas</label>
+      <textarea class="form-textarea" id="pObs" placeholder="Substituir sempre em par, verificar torque, etc."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalPart')">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePart()">Salvar peça</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Máquina -->
+<div class="overlay" id="modalMachine">
+  <div class="modal modal-lg">
+    <div class="modal-title">🏭 <span id="modalMachineTitle">Nova máquina (PGP)</span></div>
+    <!-- Seção 1: Cliente -->
+    <div style="font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--blue-light)">1. Identificação do Cliente</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Razão Social / Nome</label>
+        <input class="form-input" id="mcClient" placeholder="ex: Moldimig Macharia Ltda" list="clientSuggestions" oninput="suggestClient(this.value)">
+        <datalist id="clientSuggestions"></datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Filial / Unidade</label>
+        <input class="form-input" id="mcBranch" placeholder="ex: Matriz, Filial Andaimes">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">CNPJ / CPF <span>opcional</span></label>
+        <input class="form-input" id="mcCnpj" placeholder="ex: 11.863.418/0001-49">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contato responsável <span>opcional</span></label>
+        <input class="form-input" id="mcContact" placeholder="Nome do responsável">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Telefone <span>opcional</span></label>
+        <input class="form-input" id="mcPhone" placeholder="(37) 9 xxxx-xxxx">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail <span>opcional</span></label>
+        <input class="form-input" id="mcEmail" type="email" placeholder="email@empresa.com">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Cidade / Estado <span>opcional</span></label>
+        <input class="form-input" id="mcCity" placeholder="ex: Cláudio / MG">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Link Fotos / Drive <span>opcional</span></label>
+        <input class="form-input" id="mcDriveLink" placeholder="https://drive.google.com/...">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Última visita <span>opcional</span></label>
+        <input class="form-input" type="date" id="mcLastVisit">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Próxima visita <span>opcional</span></label>
+        <input class="form-input" type="date" id="mcNextVisit">
+      </div>
+    </div>
+    <!-- Seção 2: Máquina -->
+    <div style="font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--blue-light)">2. Identificação da Máquina</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Marca</label>
+        <input class="form-input" id="mcBrand" placeholder="ex: Schulz">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Modelo</label>
+        <input class="form-input" id="mcModel" placeholder="ex: SRP3010 III" oninput="checkMachineModelMatch(this.value)">
+      </div>
+    </div>
+    <div id="mcModelMatchAlert" style="display:none;background:var(--green-light);border:1px solid var(--green);border-radius:var(--radius);padding:8px 12px;font-size:11px;color:var(--green);margin-bottom:8px"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Número de Série</label>
+        <input class="form-input" id="mcSerial" placeholder="ex: 41805">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ano Fabricação</label>
+        <input class="form-input" id="mcYear" type="number" placeholder="ex: 2023">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Matrícula / TAG</label>
+        <input class="form-input" id="mcTag" placeholder="ex: 296-CP-01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo de Equipamento</label>
+        <select class="form-select" id="mcType">
+          <option>Compressor Parafuso</option><option>Compressor Pistão</option>
+          <option>Secador Frigorífico</option><option>Secador de Adsorção</option>
+          <option>Filtro de Linha</option><option>Vaso de Pressão</option><option>Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Localização</label>
+        <input class="form-input" id="mcLocation" placeholder="ex: Sala de Compressores">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Potência <span>opcional</span></label>
+        <input class="form-input" id="mcPower" placeholder="ex: 10cv / 7,5kW">
+      </div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.06em;margin:12px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--blue-light)">3. Horímetro e Regime</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Horímetro atual (h)</label>
+        <input class="form-input" id="mcHour" type="number" placeholder="ex: 5091">
+      </div>
+      <div class="form-group">
+        <label class="form-label">h / Semana</label>
+        <input class="form-input" id="mcHpw" type="number" placeholder="ex: 45">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Observações da máquina <span>opcional</span></label>
+      <textarea class="form-textarea" id="mcObs" placeholder="Histórico relevante, peculiaridades, alarmes recorrentes..."></textarea>
+    </div>
+    <!-- Duplicate alert for machines -->
+    <div class="dup-alert" id="dupMachineAlert">
+      <div class="dup-alert-title">⚠ Máquinas com modelo similar encontradas:</div>
+      <div class="dup-list" id="dupMachineList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalMachine')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveMachine()">Salvar máquina</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhes de peças por máquina -->
+<div class="overlay" id="modalMachineParts">
+  <div class="modal modal-lg" style="max-width:820px">
+    <div class="modal-title" style="margin-bottom:10px">🔧 <span id="modalMachinePartsTitle">Peças da máquina</span></div>
+    <div class="mdet-tabs">
+      <button class="mdet-tab active" onclick="switchMdetTab('resumo')">📋 Resumo</button>
+      <button class="mdet-tab" onclick="switchMdetTab('pecas')">🔧 Peças <span id="mdetPecasBadge"></span></button>
+      <button class="mdet-tab" onclick="switchMdetTab('fotos')">📷 Fotos</button>
+    </div>
+    <div id="modalMachinePartsBody" style="max-height:62vh;overflow-y:auto">
+      <div class="mdet-panel active" id="mdetResumo"></div>
+      <div class="mdet-panel" id="mdetPecas"></div>
+      <div class="mdet-panel" id="mdetFotos"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalMachineParts')">Fechar</button>
+      <button class="btn btn-primary" id="mdetSaveBtn" style="display:none" onclick="saveMachineParts()">💾 Salvar peças</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Cliente -->
+<div class="overlay" id="modalClient">
+  <div class="modal">
+    <div class="modal-title">🏢 <span id="modalClientTitle">Novo cliente</span></div>
+    <div class="form-group">
+      <label class="form-label">Nome / Razão Social</label>
+      <input class="form-input" id="clNome" placeholder="ex: MOLDIMIG Ltda">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">CNPJ <span>opcional</span></label>
+        <input class="form-input" id="clCnpj" placeholder="ex: 11.863.418/0001-49">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cidade</label>
+        <input class="form-input" id="clCidade" placeholder="ex: Cláudio / MG">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Telefone</label>
+        <input class="form-input" id="clTelefone" placeholder="ex: (37) 99999-0000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-mail</label>
+        <input class="form-input" id="clEmail" placeholder="ex: contato@empresa.com.br">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Antecedência de alerta <span>dias</span></label>
+        <input class="form-input" type="number" id="clAlerta" placeholder="30" value="30">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Link Google Drive <span>opcional</span></label>
+        <input class="form-input" id="clDrive" placeholder="https://drive.google.com/...">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Observações <span>opcional</span></label>
+      <textarea class="form-textarea" id="clObs" placeholder="Notas internas sobre o cliente..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalClient')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveClient()">Salvar cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">×</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(this)">
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DATABASE
+// ═══════════════════════════════════════════════════════════
+let db = JSON.parse(localStorage.getItem('proper_admin_v2') || 'null') || {
+  models: [
+    {
+      id:'m1', brand:'Schulz', model:'SRP3010 III', type:'Compressor Parafuso',
+      power:'10cv / 7,5kW', pressure:'10 bar', flow:'1150', voltage:'220/380V 3F', ampere:'28A',
+      obs:'Modelo mais comum na carteira. Atenção ao separador em ambientes com poeira. Versão III tem filtro de ar primário com encaixe diferente.',
+      photos:[],
+      directParts:[
+        {id:'dp1',name:'Filtro de óleo',ref:'021.0093-0',interval:2000,qty:1,supplier:'Schulz',cost:0,criticality:'normal',similarities:['W962','W9231'],obs:'Substituir a cada 2.000h ou anualmente'},
+        {id:'dp2',name:'Filtro de ar primário',ref:'C1140',interval:2000,qty:1,supplier:'Schulz',cost:0,criticality:'normal',similarities:['C 1140'],obs:'Verificar elemento a cada 500h em ambientes com poeira'},
+        {id:'dp3',name:'Separador ar/óleo',ref:'007.0233-0',interval:4000,qty:1,supplier:'Schulz',cost:0,criticality:'alta',similarities:['LB962'],obs:'Monitorar DP — substituir quando DP > 1 bar'},
+        {id:'dp4',name:'Óleo Compress 46 Semi',ref:'46 SEMI',interval:2000,qty:1,supplier:'Schulz',cost:0,criticality:'normal',similarities:['Sin 46 Semi'],obs:'Trocar a cada 2.000h ou 1 ano'},
+        {id:'dp5',name:'Correia',ref:'3VX 335',interval:4000,qty:3,supplier:'Gates / OEM',cost:0,criticality:'normal',similarities:['3VX335'],obs:'Substituir sempre o jogo completo'},
+      ],
+      subsystems:[
+        {id:'s1', name:'Bloco Compressor', category:'Unidade Compressora', interval:16000,
+          desc:'Conjunto de parafusos macho e fêmea — núcleo de compressão',
+          parts:[
+            {id:'sp1',name:'Rolamento dianteiro macho',ref:'6308-2RS',interval:16000,qty:1,supplier:'SKF / NSK',cost:0,criticality:'alta',similarities:['6308 2RS','6308RS'],obs:'Substituir sempre em par com o da fêmea'},
+            {id:'sp2',name:'Rolamento dianteiro fêmea',ref:'6308-2RS',interval:16000,qty:1,supplier:'SKF / NSK',cost:0,criticality:'alta',similarities:[],obs:''},
+            {id:'sp3',name:'Kit vedação eixo',ref:'021.0080-0',interval:8000,qty:1,supplier:'Schulz',cost:0,criticality:'alta',similarities:[],obs:'Verificar vazamento após montagem'},
+          ]},
+        {id:'s2', name:'Sistema Termostático', category:'Sistema de Lubrificação', interval:8000,
+          desc:'Válvula termostática e regulação de temperatura de óleo',
+          parts:[
+            {id:'sp4',name:'Reparo válvula termostática',ref:'021.0082-0',interval:8000,qty:1,supplier:'Schulz',cost:0,criticality:'normal',similarities:[],obs:'Temperatura de abertura: 70°C'},
+            {id:'sp5',name:'Reparo válvula de admissão',ref:'021.0083-0',interval:8000,qty:1,supplier:'Schulz',cost:0,criticality:'normal',similarities:[],obs:''},
+            {id:'sp6',name:'Reparo válvula pressão mínima',ref:'021.0084-0',interval:8000,qty:1,supplier:'Schulz',cost:0,criticality:'normal',similarities:[],obs:'Pressão de abertura: 4,5 bar'},
+          ]}
+      ]
+    }
+  ],
+  machines: [
+  {
+    "id": "EQ-MODELO",
+    "client": "SORRAG",
+    "branch": "Filial - Andaimes",
+    "cnpj": "",
+    "contact": "Adilson",
+    "phone": "(37) 99999-0001",
+    "email": "fiscal@sorrag.com.br",
+    "city": "Cláudio / MG",
+    "lastVisit": "2026-03-13",
+    "nextVisit": "2026-04-13",
+    "brand": "Schulz",
+    "model": "SRP 3010 III",
+    "serial": "41805",
+    "year": 2023,
+    "type": "Compressor Parafuso",
+    "location": "Laser de Corte de Tubos",
+    "tag": "296-CP-01",
+    "hourTotal": 5091,
+    "hpw": 90,
+    "power": "10cv / 7,5kW",
+    "obs": "Ambiente com poeira — verificar filtro de ar a cada visita",
+    "driveLink": "",
+    "photos": [],
+    "updatedAt": "2026-03-25",
+    "parts": {
+      "filtro_oleo": {
+        "name": "Filtro de Óleo",
+        "lastChange": 5091,
+        "interval": 1000,
+        "ref": "W9231",
+        "na": false
+      },
+      "filtro_ar_prim": {
+        "name": "Filtro de Ar Primário",
+        "lastChange": 5091,
+        "interval": 500,
+        "ref": "C1140",
+        "na": false
+      },
+      "filtro_ar_secu": {
+        "name": "Filtro de Ar Secundário",
+        "lastChange": 0,
+        "interval": 4000,
+        "ref": "",
+        "na": true
+      },
+      "separador": {
+        "name": "Separador Ar/Óleo",
+        "lastChange": 3091,
+        "interval": 4000,
+        "ref": "007.0233-0",
+        "na": false
+      },
+      "oleo_lubrif": {
+        "name": "Óleo Lubrificante",
+        "lastChange": 5091,
+        "interval": 1000,
+        "ref": "46 SEMI",
+        "na": false
+      },
+      "v_termostatica": {
+        "name": "Válvula Termostática",
+        "lastChange": 0,
+        "interval": 8000,
+        "ref": "",
+        "na": true
+      },
+      "v_admissao": {
+        "name": "Válvula de Admissão",
+        "lastChange": 0,
+        "interval": 8000,
+        "ref": "",
+        "na": true
+      },
+      "v_pressao_min": {
+        "name": "Válvula Pressão Mínima",
+        "lastChange": 0,
+        "interval": 8000,
+        "ref": "",
+        "na": true
+      },
+      "correia": {
+        "name": "Correia",
+        "lastChange": 3091,
+        "interval": 3000,
+        "ref": "3VX 335",
+        "na": false
+      }
+    }
+  }
+],
+      clients: [
+  {
+    "id": "CLI-MODELO",
+    "nome": "SORRAG",
+    "cnpj": "",
+    "cidade": "Cláudio / MG",
+    "telefone": "(37) 99999-0001",
+    "email": "fiscal@sorrag.com.br",
+    "antecedencia_alerta_dias": 30,
+    "drive_url": "",
+    "observacoes": "Cliente modelo — exemplo de cadastro completo.",
+    "updatedAt": "2026-03-25T00:00:00.000Z"
+  }
+]
+};
+
+// Pre-load clients from PGP data
+const PGP_CLIENTS = ["ENGETAP ENGENHARIA LTDA","LOCALIZA RENT A CAR SA","DAMMAPAC","STATUS IND. E COM. LTDA","SICREDI","SICOOB","RAIZEN","METALURGICA FERCAR LTDA","PRALUM DISTRIBUIDORA","MINERITA LOGISTICA","MOLDIMIG MACHARIA LTDA","PEMILL","NEO ESSENCI DESIGN","PH INTRALOGISTICA","METALURGICA AMAPA","METALURGICA METALMIG","METALFORMA","SORRAG DO BRASIL","TECHTO BRASIL","SILOE MANUTENCAO INDUSTRIAL","SAFOL","METALSIDER","METAMIL","FUNDIÇÃO CLAUDIENSE","BOMP","MARPE SERVICOS","METALLURGICA JANO","SICOOB CONFEDERACAO","MONADE MOVEIS","OFFICER INDUSTRIA QUIMICA","METALURGICA DRAGAO","PEDREIRA IRMAOS MACHADO","ARAMIG","METASAL","SENAI CETEF","MARANGONI - BECAPI","META X","ALUMINAS","BONOBO","UNIFENAS","USIMINAS","SIDERURGICA ATLAS","SUZANO","STELLANTIS"];
+
+let selModelId = db.models.length > 0 ? db.models[0].id : null;
+let editModelId=null, editSubModelId=null, editSubId=null;
+let addPartTarget=null, editPartTarget=null;
+let editMachineId=null, collapsedSubs={};
+let currentSims=[]; // temp similarity list for part modal
+let currentPhotoTarget=null; // {type:'model'|'machine', id}
+let sidebarTab='models'; // 'models'|'machines'
+let currentView='catalog';
+
+let gsUrl=localStorage.getItem('proper_gs_url')||'';
+let gsConnected=false;
+
+function normKey(v){ return String(v||'').trim().toLowerCase(); }
+function parseFlexibleDate(v){
+  if(!v) return null;
+  if(v instanceof Date && !isNaN(v)) return v;
+  const s=String(v).trim();
+  if(!s) return null;
+  const br=s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+.*)?$/);
+  if(br){ const d=new Date(`${br[3]}-${br[2]}-${br[1]}T00:00:00`); return isNaN(d)?null:d; }
+  const d=new Date(s);
+  return isNaN(d)?null:d;
+}
+function dateOnlyISO(v){
+  const d=parseFlexibleDate(v);
+  return d?d.toISOString().slice(0,10):'';
+}
+function findMachineByRefs(id, serial, tag){
+  const idKey=String(id||'').trim();
+  const serialKey=normKey(serial);
+  const tagKey=normKey(tag);
+  let eq=null;
+  if(idKey) eq=db.machines.find(m=>String(m.id||'').trim()===idKey);
+  if(!eq && serialKey) eq=db.machines.find(m=>normKey(m.serial)===serialKey);
+  if(!eq && tagKey) eq=db.machines.find(m=>normKey(m.tag)===tagKey);
+  return eq||null;
+}
+
+function save(){localStorage.setItem('proper_admin_v2',JSON.stringify(db))}
+function uid(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,5)}
+
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(type?' '+type:'');
+  setTimeout(()=>t.className='toast',2600);
+}
+
+// ═══════════════════════════════════════════════════════════
+// GOOGLE SHEETS
+// ═══════════════════════════════════════════════════════════
+function setGsStatus(state){
+  const dot=document.getElementById('gsDot'),txt=document.getElementById('gsStatusText');
+  const syncBtn=document.getElementById('btnSyncHeader');
+  if(state==='connected'){
+    dot.className='gs-dot';txt.textContent='Sheets OK';gsConnected=true;
+    if(syncBtn) syncBtn.style.display='';
+  }
+  else if(state==='connecting'){dot.className='gs-dot sync';txt.textContent='Conectando...';gsConnected=false;if(syncBtn)syncBtn.style.display='none';}
+  else{dot.className='gs-dot off';txt.textContent='Sem conexão';gsConnected=false;if(syncBtn)syncBtn.style.display='none';}
+}
+
+async function testGS(){
+  if(!gsUrl){setGsStatus('off');return}
+  setGsStatus('connecting');
+  try{
+    const r=await fetch(gsUrl+'?action=ping');
+    const d=await r.json();
+    if(d.status==='ok'){setGsStatus('connected');return true}
+    throw new Error(d.error||'err')
+  }catch(e){setGsStatus('off');return false}
+}
+
+async function syncToGS(action,payload){
+  if(!gsUrl||!gsConnected) return;
+  try{await fetch(gsUrl,{method:'POST',body:JSON.stringify({action,...payload})})}
+  catch(e){console.warn('GS sync',e)}
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS DE STATUS
+// ═══════════════════════════════════════════════════════════
+function statusBadge(st){
+  if(st==='vencido') return '<span class="badge-vencido">⛔ VENCIDA</span>';
+  if(st==='alerta')  return '<span class="badge-alerta">⚠ ATENÇÃO</span>';
+  if(st==='ok')      return '<span class="badge-ok">✓ OK</span>';
+  if(st==='n/a')     return '<span class="badge-na">N/A</span>';
+  return '<span class="badge-sem">—</span>';
+}
+
+function calcPartStatus(lastChange, interval, hourTotal){
+  if(!lastChange||!interval) return {status:'sem_dados',remaining:null,next:null};
+  const next=lastChange+interval;
+  const remaining=next-hourTotal;
+  const alertThreshold=interval*0.10;
+  let status='ok';
+  if(remaining<=0) status='vencido';
+  else if(remaining<=alertThreshold) status='alerta';
+  return {status,remaining,next};
+}
+
+function getMachineWorstStatus(eq){
+  const parts=_getEffectiveParts(eq);
+  let countVencido=0,countAlerta=0,countSemDados=0;
+  parts.forEach(p=>{
+    if(p.na) return;
+    const {status}=calcPartStatus(p.lastChange||0,p.interval,eq.hourTotal||0);
+    if(status==='vencido') countVencido++;
+    else if(status==='alerta') countAlerta++;
+    else if(status==='sem_dados') countSemDados++;
+  });
+  if(countVencido>0) return {level:'vencido',count:countVencido,label:`${countVencido} peça${countVencido>1?'s':''} vencida${countVencido>1?'s':''}`};
+  if(countAlerta>0)  return {level:'alerta', count:countAlerta, label:`${countAlerta} peça${countAlerta>1?'s':''} em atenção`};
+  if(countSemDados>0)return {level:'faltando',count:countSemDados,label:`${countSemDados} peça${countSemDados>1?'s':''} sem dados`};
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENTES — CRUD
+// ═══════════════════════════════════════════════════════════
+let editClientId=null;
+
+function openModalClient(id){
+  editClientId=id||null;
+  if(id){
+    const c=db.clients.find(c=>c.id===id);
+    if(!c) return;
+    document.getElementById('modalClientTitle').textContent='Editar cliente';
+    document.getElementById('clNome').value=c.nome||'';
+    document.getElementById('clCnpj').value=c.cnpj||'';
+    document.getElementById('clCidade').value=c.cidade||'';
+    document.getElementById('clTelefone').value=c.telefone||'';
+    document.getElementById('clEmail').value=c.email||'';
+    document.getElementById('clAlerta').value=c.antecedencia_alerta_dias||30;
+    document.getElementById('clDrive').value=c.drive_url||'';
+    document.getElementById('clObs').value=c.observacoes||'';
+  } else {
+    document.getElementById('modalClientTitle').textContent='Novo cliente';
+    ['clNome','clCnpj','clCidade','clTelefone','clEmail','clDrive','clObs'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('clAlerta').value=30;
+  }
+  openModal('modalClient');
+}
+
+function saveClient(){
+  const nome=document.getElementById('clNome').value.trim();
+  if(!nome){toast('Informe o nome do cliente','error');return;}
+  if(!db.clients) db.clients=[];
+  const data={
+    id: editClientId||('CLI-'+uid()),
+    nome,
+    cnpj:       document.getElementById('clCnpj').value.trim(),
+    cidade:     document.getElementById('clCidade').value.trim(),
+    telefone:   document.getElementById('clTelefone').value.trim(),
+    email:      document.getElementById('clEmail').value.trim(),
+    antecedencia_alerta_dias: parseInt(document.getElementById('clAlerta').value)||30,
+    drive_url:  document.getElementById('clDrive').value.trim(),
+    observacoes:document.getElementById('clObs').value.trim(),
+    updatedAt:  new Date().toISOString()
+  };
+  if(editClientId){
+    const idx=db.clients.findIndex(c=>c.id===editClientId);
+    if(idx>=0) db.clients[idx]=data;
+    toast('Cliente atualizado','success');
+  } else {
+    db.clients.push(data);
+    toast('Cliente cadastrado','success');
+  }
+  editClientId=null;
+  save(); closeModal('modalClient'); renderClients();
+  syncToGS('saveClient',{client:data});
+}
+
+function openModalClientPrefill(nome){
+  openModalClient();
+  document.getElementById('clNome').value=nome;
+}
+
+function deleteClient(id){
+  if(!confirm('Excluir este cliente?')) return;
+  db.clients=db.clients.filter(c=>c.id!==id);
+  save(); renderClients(); toast('Cliente excluído');
+}
+
+function connectGS(){
+  const url=document.getElementById('gsUrlInput').value.trim();
+  if(!url){toast('Cole a URL do Apps Script','error');return}
+  localStorage.setItem('proper_gs_url',url);gsUrl=url;
+  testGS().then(ok=>{
+    const el=document.getElementById('gsTestResult');
+    if(ok){el.innerHTML='<span style="color:var(--green)">✓ Conectado com sucesso!</span>';toast('Conectado!','success')}
+    else el.innerHTML='<span style="color:var(--red)">✗ Falha. Verifique URL e permissões.</span>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// VIEWS
+// ═══════════════════════════════════════════════════════════
+function showView(v){
+  currentView=v;
+  const allViews=['dashboard','preventivas','catalog','machines','clients','config'];
+  allViews.forEach(x=>{
+    const el=document.getElementById('view'+x.charAt(0).toUpperCase()+x.slice(1));
+    if(el) el.style.display=x===v?'':'none';
+    const nav=document.getElementById('nav'+x.charAt(0).toUpperCase()+x.slice(1));
+    if(nav) nav.classList.toggle('active',x===v);
+  });
+
+  // Sidebar só aparece no catálogo
+  const sidebar=document.querySelector('.sidebar');
+  if(sidebar) sidebar.classList.toggle('sidebar-hidden', v!=='catalog');
+
+  if(v==='dashboard'){
+    renderDashboard();
+  } else if(v==='preventivas'){
+    renderPreventivas();
+  } else if(v==='catalog'){
+    document.getElementById('sidebarNewLabel').textContent='Novo modelo';
+    document.getElementById('sidebarNewBtn').onclick=()=>openModalModel();
+    renderSidebar(document.getElementById('sidebarSearch')?.value||'');
+    renderCatalog();
+  } else if(v==='machines'){
+    renderMachines();
+  } else if(v==='clients'){
+    document.getElementById('sidebarNewLabel').textContent='Novo cliente';
+    document.getElementById('sidebarNewBtn').onclick=()=>openModalClient();
+    renderClients();
+  } else if(v==='config'){
+    renderConfigStats();
+    if(gsUrl) document.getElementById('gsUrlInput').value=gsUrl;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// SIDEBAR
+// ═══════════════════════════════════════════════════════════
+function setSidebarTab(tab){
+  // Catálogo só tem modelos — tab ignorado
+  renderSidebar(document.getElementById('sidebarSearch')?.value||'');
+}
+
+function renderSidebar(filter=''){
+  const list=document.getElementById('sidebarList');
+  const items=db.models.filter(m=>(m.brand+' '+m.model).toLowerCase().includes(filter.toLowerCase()));
+  if(!items.length){
+    list.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:11px">Nenhum modelo cadastrado</div>';
+    return;
+  }
+  list.innerHTML=items.map(m=>{
+    const abbr=((m.brand||'?')[0]+((m.model||'?')[0])).toUpperCase();
+    const nParts=(m.directParts||[]).length+(m.subsystems||[]).reduce((a,s)=>a+s.parts.length,0);
+    const nMachines=db.machines.filter(eq=>modelKey(eq.brand,eq.model)===modelKey(m.brand,m.model)).length;
+    return`<div class="sidebar-item ${m.id===selModelId&&currentView==='catalog'?'active':''}" onclick="selectModel('${m.id}')">
+      <div class="si-icon">${abbr}</div>
+      <div class="si-info">
+        <div class="si-name">${m.brand} ${m.model}</div>
+        <div class="si-meta">${nParts} peça${nParts!==1?'s':''}${nMachines?' · 🏭 '+nMachines:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterSidebar(v){renderSidebar(v)}
+function selectModel(id){selModelId=id;showView('catalog');renderCatalog();renderSidebar(document.getElementById('sidebarSearch').value)}
+function getModel(id){return db.models.find(m=>m.id===id)}
+
+// ═══════════════════════════════════════════════════════════
+// CATALOG VIEW
+// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDashboard(){
+  const el=document.getElementById('viewDashboard');
+  if(!el) return;
+
+  // Calcular estatísticas
+  const total=db.machines.length;
+  const byClient={};
+  db.machines.forEach(eq=>{const k=eq.client||'Sem cliente';if(!byClient[k])byClient[k]=[];byClient[k].push(eq)});
+  const nClients=Object.keys(byClient).length;
+
+  let nVencidas=0, nAlertas=0, nOk=0, nSemDados=0;
+  db.machines.forEach(eq=>{
+    const ws=getMachineWorstStatus(eq);
+    if(!ws) nSemDados++;
+    else if(ws.level==='vencido') nVencidas++;
+    else if(ws.level==='alerta')  nAlertas++;
+    else nOk++;
+  });
+
+  const withModel=db.machines.filter(eq=>db.models.some(m=>modelKey(m.brand,m.model)===modelKey(eq.brand,eq.model))).length;
+  const withPhotos=db.machines.filter(eq=>(eq.photos||[]).length>0).length;
+
+  // Máquinas mais urgentes (top 5 vencidas)
+  const urgentes=db.machines
+    .map(eq=>({eq, ws:getMachineWorstStatus(eq)}))
+    .filter(({ws})=>ws&&(ws.level==='vencido'||ws.level==='alerta'))
+    .sort((a,b)=>{
+      if(a.ws.level===b.ws.level) return b.ws.count-a.ws.count;
+      return a.ws.level==='vencido'?-1:1;
+    })
+    .slice(0,5);
+
+  el.innerHTML=`
+    <div style="font-size:18px;font-weight:700;margin-bottom:4px">Dashboard</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Visão geral da carteira — clique nos cards para filtrar</div>
+
+    <div class="dash-grid">
+      <div class="dash-card danger" onclick="showView('preventivas');setPrevFilter('vencido')" title="Ver máquinas com peças vencidas">
+        <div class="dash-card-val">${nVencidas}</div>
+        <div class="dash-card-lbl">Peças vencidas</div>
+        <div class="dash-card-sub">${nVencidas===1?'1 máquina':nVencidas+' máquinas'} com urgência</div>
+        <div class="dash-card-arrow">→</div>
+      </div>
+      <div class="dash-card warning" onclick="showView('preventivas');setPrevFilter('alerta')" title="Ver máquinas em atenção">
+        <div class="dash-card-val">${nAlertas}</div>
+        <div class="dash-card-lbl">Em atenção</div>
+        <div class="dash-card-sub">Dentro de 10% do intervalo</div>
+        <div class="dash-card-arrow">→</div>
+      </div>
+      <div class="dash-card ok" onclick="showView('preventivas');setPrevFilter('ok')" title="Ver máquinas OK">
+        <div class="dash-card-val">${nOk}</div>
+        <div class="dash-card-lbl">Em dia</div>
+        <div class="dash-card-sub">Preventivas em ordem</div>
+        <div class="dash-card-arrow">→</div>
+      </div>
+      <div class="dash-card info" onclick="showView('machines')" title="Ver todas as máquinas">
+        <div class="dash-card-val">${total}</div>
+        <div class="dash-card-lbl">Equipamentos</div>
+        <div class="dash-card-sub">${nClients} cliente${nClients!==1?'s':''} ativos</div>
+        <div class="dash-card-arrow">→</div>
+      </div>
+      <div class="dash-card" onclick="showView('catalog')" title="Ver catálogo">
+        <div class="dash-card-val">${db.models.length}</div>
+        <div class="dash-card-lbl">Modelos no catálogo</div>
+        <div class="dash-card-sub">${withModel} máquinas vinculadas</div>
+        <div class="dash-card-arrow">→</div>
+      </div>
+      <div class="dash-card" onclick="showView('machines')" style="opacity:${nSemDados?1:.5}">
+        <div class="dash-card-val" style="color:var(--text3)">${nSemDados}</div>
+        <div class="dash-card-lbl">Sem dados de peças</div>
+        <div class="dash-card-sub">Requerem lançamento</div>
+        <div class="dash-card-arrow">→</div>
+      </div>
+    </div>
+
+    ${urgentes.length?`
+    <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">
+      ⚠ Máquinas que precisam de atenção imediata
+    </div>
+    <div class="table-wrap" style="margin-bottom:18px">
+      <table class="prev-table">
+        <thead><tr><th></th><th>Máquina</th><th>Cliente</th><th>Horímetro</th><th>Situação</th><th></th></tr></thead>
+        <tbody>${urgentes.map(({eq,ws})=>`
+          <tr onclick="openMachineDetail('${eq.id}')">
+            <td style="padding:7px 6px;width:4px">
+              <div class="prev-urgency-bar" style="background:${ws.level==='vencido'?'var(--red)':'var(--orange)'}"></div>
+            </td>
+            <td>
+              <div style="font-weight:600;font-size:12px">${eq.brand} ${eq.model}</div>
+              <div style="font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace">${eq.tag||eq.serial||'—'}</div>
+            </td>
+            <td style="font-size:12px">${eq.client||'—'}</td>
+            <td><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--blue-mid)">${(eq.hourTotal||0).toLocaleString('pt-BR')}h</span></td>
+            <td>${ws.level==='vencido'?
+              `<span class="badge-vencido">⛔ ${ws.label}</span>`:
+              `<span class="badge-alerta">⚠ ${ws.label}</span>`}
+            </td>
+            <td><button class="btn btn-secondary btn-xs" onclick="event.stopPropagation();openMachineDetail('${eq.id}')">Ver →</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:`
+    <div style="background:var(--green-light);border-left:3px solid var(--green);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--green);font-weight:600;margin-bottom:18px">
+      ✓ Nenhuma máquina com preventiva vencida ou em alerta. Carteira em ordem!
+    </div>`}
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="showView('preventivas')">Ver todas as preventivas →</button>
+      <button class="btn btn-secondary" onclick="showView('machines')">Gerenciar máquinas →</button>
+      <button class="btn btn-secondary" onclick="syncFromGS()">↓ Sincronizar do Sheets</button>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PREVENTIVAS
+// ═══════════════════════════════════════════════════════════
+let _prevFilter='todos';
+
+function setPrevFilter(f){
+  _prevFilter=f;
+  renderPreventivas();
+}
+
+function renderPreventivas(){
+  const el=document.getElementById('viewPreventivas');
+  if(!el) return;
+
+  // Calcular status de cada máquina
+  const rows=db.machines.map(eq=>({
+    eq,
+    ws: getMachineWorstStatus(eq),
+    parts: _getEffectiveParts(eq)
+  }));
+
+  // Ordenar: vencido > alerta > sem_dados > ok
+  const order={vencido:0,alerta:1,faltando:2,ok:3,null:4};
+  rows.sort((a,b)=>{
+    const oa=order[a.ws?.level||'null'];
+    const ob=order[b.ws?.level||'null'];
+    if(oa!==ob) return oa-ob;
+    return (b.ws?.count||0)-(a.ws?.count||0);
+  });
+
+  // Filtrar
+  const filtered=_prevFilter==='todos'?rows:rows.filter(({ws})=>{
+    if(!ws) return _prevFilter==='sem_dados';
+    return ws.level===_prevFilter;
+  });
+
+  const counts={
+    todos: rows.length,
+    vencido: rows.filter(r=>r.ws?.level==='vencido').length,
+    alerta:  rows.filter(r=>r.ws?.level==='alerta').length,
+    ok:      rows.filter(r=>!r.ws||r.ws.level==='ok').length,
+    sem_dados: rows.filter(r=>!r.ws).length,
+  };
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:18px;font-weight:700">Preventivas</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">Status de peças por máquina</div>
+      </div>
+      <input type="text" id="prevSearchInput" class="form-input" placeholder="Buscar cliente ou máquina..."
+             style="width:200px" oninput="renderPreventivas()" value="">
+    </div>
+
+    <div class="prev-filters">
+      <button class="prev-filter-btn ${_prevFilter==='todos'?'active':''}" onclick="setPrevFilter('todos')">Todos (${counts.todos})</button>
+      <button class="prev-filter-btn danger ${_prevFilter==='vencido'?'active':''}" onclick="setPrevFilter('vencido')">⛔ Vencidas (${counts.vencido})</button>
+      <button class="prev-filter-btn warning ${_prevFilter==='alerta'?'active':''}" onclick="setPrevFilter('alerta')">⚠ Atenção (${counts.alerta})</button>
+      <button class="prev-filter-btn ${_prevFilter==='ok'?'active':''}" onclick="setPrevFilter('ok')">✓ Em dia (${counts.ok})</button>
+      <button class="prev-filter-btn ${_prevFilter==='sem_dados'?'active':''}" onclick="setPrevFilter('sem_dados')">— Sem dados (${counts.sem_dados})</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="prev-table">
+        <thead><tr>
+          <th style="width:4px"></th>
+          <th>Máquina</th>
+          <th>Cliente</th>
+          <th>Horímetro</th>
+          <th>Pior peça</th>
+          <th>Status geral</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${filtered.length?filtered.map(({eq,ws,parts})=>{
+          const search=(document.getElementById('prevSearchInput')?.value||'').toLowerCase();
+          if(search&&!(eq.client+eq.brand+eq.model+eq.tag+eq.serial).toLowerCase().includes(search)) return '';
+          const barColor=ws?.level==='vencido'?'var(--red)':ws?.level==='alerta'?'var(--orange)':ws?'var(--green)':'var(--gray-300)';
+          // Peça mais crítica
+          let worstPart=null, worstRemaining=Infinity;
+          parts.forEach(p=>{
+            if(p.na||!p.lastChange||!p.interval) return;
+            const {remaining}=calcPartStatus(p.lastChange,p.interval,eq.hourTotal||0);
+            if(remaining!==null&&remaining<worstRemaining){worstRemaining=remaining;worstPart=p;}
+          });
+          return`<tr onclick="openMachineDetail('${eq.id}')">
+            <td style="padding:0 6px;width:4px"><div style="width:4px;height:36px;border-radius:2px;background:${barColor}"></div></td>
+            <td>
+              <div class="mach-model-name">${eq.brand} ${eq.model}</div>
+              <div class="mach-meta" style="font-family:'IBM Plex Mono',monospace">${eq.tag||eq.serial||'—'}</div>
+            </td>
+            <td><div style="font-size:12px;font-weight:600">${eq.client||'—'}</div><div style="font-size:10px;color:var(--text3)">${eq.city||''}</div></td>
+            <td><span class="mach-hora">${(eq.hourTotal||0).toLocaleString('pt-BR')}h</span><div style="font-size:10px;color:var(--text3)">${eq.hpw||'—'} h/sem</div></td>
+            <td style="font-size:11px">
+              ${worstPart?`<div style="font-weight:600">${worstPart.name}</div>
+                <div style="color:${worstRemaining<=0?'var(--red)':'var(--orange)'};font-family:'IBM Plex Mono',monospace;font-size:10px">
+                  ${worstRemaining<=0?'VENCIDA':'Restam '+worstRemaining.toLocaleString('pt-BR')+'h'}
+                </div>`:'<span style="color:var(--text3)">—</span>'}
+            </td>
+            <td>
+              ${!ws?'<span class="badge-sem">Sem dados</span>':
+                ws.level==='vencido'?`<span class="badge-vencido">⛔ ${ws.count} vencida${ws.count>1?'s':''}`:
+                ws.level==='alerta' ?`<span class="badge-alerta">⚠ ${ws.count} em alerta</span>`:
+                '<span class="badge-ok">✓ OK</span>'}
+            </td>
+            <td><button class="btn btn-secondary btn-xs" onclick="event.stopPropagation();openMachineDetail('${eq.id}')">Detalhes</button></td>
+          </tr>`;
+        }).join(''):`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma máquina nesta categoria.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderCatalog(){
+  const el=document.getElementById('viewCatalog');
+
+  // Se não tem modelo selecionado, mostrar visão geral do catálogo
+  if(!selModelId||!getModel(selModelId)){
+    const total=db.models.length;
+    const totalParts=db.models.reduce((a,m)=>(m.directParts||[]).length+(m.subsystems||[]).reduce((b,s)=>b+s.parts.length,0)+a,0);
+    el.innerHTML=`
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px">Catálogo de Modelos</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:16px">
+        Referências técnicas de equipamentos — peças, intervalos e similares.
+        <i class="tooltip-icon" data-tip="O catálogo é uma biblioteca de referência. Cada modelo define as peças padrão e seus intervalos. As máquinas reais dos clientes ficam na aba Máquinas PGP e podem ser vinculadas a um modelo do catálogo.">?</i>
+      </div>
+      <div class="stats-grid" style="margin-bottom:18px">
+        <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-lbl">Modelos cadastrados</div></div>
+        <div class="stat-card"><div class="stat-val">${totalParts}</div><div class="stat-lbl">Peças no catálogo</div></div>
+        <div class="stat-card"><div class="stat-val">${db.machines.filter(eq=>db.models.some(m=>modelKey(m.brand,m.model)===modelKey(eq.brand,eq.model))).length}</div><div class="stat-lbl">Máquinas vinculadas</div></div>
+      </div>
+      ${total?`
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px">Selecione um modelo na lista ao lado para ver detalhes</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Modelo</th><th>Tipo</th><th>Peças</th><th>Máquinas vinculadas</th><th></th></tr></thead>
+        <tbody>${db.models.map(m=>{
+          const nParts=(m.directParts||[]).length+(m.subsystems||[]).reduce((a,s)=>a+s.parts.length,0);
+          const machines=db.machines.filter(eq=>modelKey(eq.brand,eq.model)===modelKey(m.brand,m.model));
+          return`<tr style="cursor:pointer" onclick="selectModel('${m.id}')">
+            <td><div style="font-weight:600">${m.brand} ${m.model}</div><div style="font-size:10px;color:var(--text3)">${m.power||''}${m.pressure?' · '+m.pressure:''}</div></td>
+            <td style="font-size:11px;color:var(--text2)">${m.type||'—'}</td>
+            <td><span style="font-weight:600;color:var(--blue-mid)">${nParts}</span></td>
+            <td>${machines.length?`<span style="font-weight:600">${machines.length}</span> <span style="font-size:10px;color:var(--text3)">${machines.map(e=>e.tag||e.client).slice(0,3).join(', ')}${machines.length>3?'...':''}</span>`:'<span style="color:var(--text3)">Nenhuma</span>'}</td>
+            <td><button class="btn btn-secondary btn-xs">Abrir →</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>`:`
+      <div class="empty"><div class="empty-icon">📋</div>
+        <div class="empty-title">Catálogo vazio</div>
+        <div class="empty-sub">Clique em "+ Novo modelo" para adicionar o primeiro modelo de equipamento.<br>
+        Você também pode criar um modelo a partir de qualquer máquina cadastrada no PGP (botão "Promover ao catálogo" na ficha da máquina).</div>
+      </div>`}
+    `;
+    return;
+  }
+
+  const m=getModel(selModelId);
+  const nDirect=(m.directParts||[]).length;
+  const nSubs=(m.subsystems||[]).length;
+  const nSubParts=(m.subsystems||[]).reduce((a,s)=>a+s.parts.length,0);
+  const nPhotos=(m.photos||[]).length;
+  const machinesWithModel=db.machines.filter(eq=>modelKey(eq.brand,eq.model)===modelKey(m.brand,m.model));
+
+  el.innerHTML=`
+    <div class="model-hero">
+      <div class="model-hero-top">
+        <div>
+          <div class="model-hero-title">${m.brand} <span style="font-weight:400">${m.model}</span></div>
+          <div class="model-hero-sub">${m.type||''}${m.power?' · '+m.power:''}${m.pressure?' · '+m.pressure:''}${m.flow?' · '+m.flow+' l/min':''}</div>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-secondary btn-sm" onclick="openModalModel('${m.id}')">Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteModel('${m.id}')">Excluir</button>
+        </div>
+      </div>
+      <div class="chip-row">
+        <span class="chip">${nDirect} peça${nDirect!==1?'s':''} diretas</span>
+        <span class="chip">${nSubs} subsistema${nSubs!==1?'s':''}</span>
+        <span class="chip">${nSubParts} peça${nSubParts!==1?'s':''} em subsistemas</span>
+        <span class="chip ${nPhotos?'green':'gray'}">${nPhotos} foto${nPhotos!==1?'s':''}</span>
+        ${machinesWithModel.length?`<span class="chip orange" style="cursor:pointer" title="Ver máquinas com este modelo" onclick="document.getElementById('catalogMachinesSection').scrollIntoView({behavior:'smooth'})">🏭 ${machinesWithModel.length} máquina${machinesWithModel.length!==1?'s':''} em campo</span>`:'<span class="chip gray">Sem máquinas cadastradas</span>'}
+      </div>
+      ${m.obs?`<div style="margin-top:10px;font-size:12px;color:var(--text2);background:var(--blue-pale);padding:8px 12px;border-radius:var(--radius);border-left:3px solid var(--blue-mid)">${m.obs}</div>`:''}
+      ${m.voltage||m.ampere?`<div style="margin-top:6px;display:flex;gap:10px;font-size:11px;color:var(--text3)">${m.voltage?'<span>⚡ '+m.voltage+'</span>':''}${m.ampere?'<span>'+m.ampere+'</span>':''}</div>`:''}
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabDirect" onclick="switchTab('direct')">Peças diretas<span class="badge">${nDirect}</span></button>
+      <button class="tab-btn" id="tabSubs" onclick="switchTab('subs')">Subsistemas<span class="badge">${nSubs}</span></button>
+      <button class="tab-btn" id="tabPhotos" onclick="switchTab('photos')">Fotos<span class="badge">${nPhotos}</span></button>
+    </div>
+
+    <div id="panelDirect">
+      <div class="sec-header">
+        <span class="sec-title">Peças de aplicação direta
+          <i class="tooltip-icon" style="margin-left:4px" data-tip="Peças que se aplicam diretamente a este modelo, independente de subsistema. Ex: filtros, óleo, correias.">?</i>
+        </span>
+        <button class="btn btn-primary btn-sm" onclick="openAddPart('${m.id}','direct',null)">+ Adicionar peça</button>
+      </div>
+      ${renderPartsTable(m.directParts||[],m.id,'direct',null)}
+    </div>
+
+    <div id="panelSubs" style="display:none">
+      <div class="sec-header">
+        <span class="sec-title">Subsistemas e conjuntos
+          <i class="tooltip-icon" style="margin-left:4px" data-tip="Agrupamentos de peças por sistema funcional. Ex: Bloco Compressor, Sistema de Lubrificação, Quadro Elétrico.">?</i>
+        </span>
+        <button class="btn btn-primary btn-sm" onclick="openAddSub('${m.id}')">+ Novo subsistema</button>
+      </div>
+      ${(m.subsystems||[]).map(s=>renderSubsystem(m.id,s)).join('')}
+      ${!nSubs?`<div class="empty"><div class="empty-icon">⊙</div><div class="empty-title">Nenhum subsistema</div><div class="empty-sub">Subsistemas organizam peças por conjunto funcional. Útil para modelos com muitas peças.</div></div>`:''}
+    </div>
+
+    <div id="panelPhotos" style="display:none">
+      <div class="sec-header">
+        <span class="sec-title">Fotos do modelo</span>
+        <button class="btn btn-primary btn-sm" onclick="triggerPhotoUpload('model','${m.id}')">+ Adicionar fotos</button>
+      </div>
+      ${renderPhotosGrid(m.photos||[],'model',m.id)}
+    </div>
+
+    <!-- Seção de máquinas em campo com este modelo -->
+    <div id="catalogMachinesSection" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        🏭 Máquinas em campo com este modelo
+        <i class="tooltip-icon" data-tip="Equipamentos dos clientes cadastrados no PGP que usam este modelo. Clique em 'Detalhes' para ver o status das peças de cada máquina.">?</i>
+      </div>
+      ${machinesWithModel.length?`
+      <div class="table-wrap">
+        <table class="mach-table">
+          <thead><tr><th>TAG</th><th>Cliente</th><th>Série</th><th>Horímetro</th><th>Status</th><th></th></tr></thead>
+          <tbody>${machinesWithModel.map(eq=>{
+            const ws=getMachineWorstStatus(eq);
+            return`<tr>
+              <td><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--blue-light);color:var(--blue-mid);padding:2px 7px;border-radius:4px">${eq.tag||'—'}</span></td>
+              <td><div style="font-weight:600;font-size:12px">${eq.client||'—'}</div><div style="font-size:10px;color:var(--text3)">${eq.branch||eq.location||''}</div></td>
+              <td><span style="font-family:'IBM Plex Mono',monospace;font-size:11px">${eq.serial||'—'}</span></td>
+              <td><span class="mach-hora">${(eq.hourTotal||0).toLocaleString('pt-BR')}h</span></td>
+              <td>${!ws?'<span class="badge-sem">Sem dados</span>':ws.level==='vencido'?`<span class="badge-vencido">⛔ ${ws.label}</span>`:ws.level==='alerta'?`<span class="badge-alerta">⚠ ${ws.label}</span>`:'<span class="badge-ok">✓ OK</span>'}</td>
+              <td><button class="btn btn-secondary btn-xs" onclick="openMachineDetail('${eq.id}')">Detalhes</button></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>`:`
+      <div style="padding:14px;text-align:center;border:1px solid var(--border);border-radius:var(--radius);color:var(--text3);font-size:12px">
+        Nenhuma máquina cadastrada com este modelo.
+        <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="openModalMachine()">+ Cadastrar máquina</button>
+      </div>`}
+    </div>
+  `;
+}
+
+function switchTab(tab){
+  ['direct','subs','photos'].forEach(t=>{
+    const p=document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(p) p.style.display=t===tab?'':'none';
+    const b=document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1));
+    if(b) b.classList.toggle('active',t===tab);
+  });
+}
+
+function renderPartsTable(parts,modelId,type,subId){
+  if(!parts||!parts.length) return`<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px;border:1px solid var(--border);border-radius:var(--radius)">Nenhuma peça cadastrada. Clique em "+ Adicionar peça" para começar.</div>`;
+
+  // Índice de referências em todo o catálogo para mostrar aplicações cruzadas
+  const refIndex={};
+  db.models.forEach(m=>{
+    const allP=[...(m.directParts||[]),...(m.subsystems||[]).flatMap(s=>s.parts)];
+    allP.forEach(p=>{
+      if(p.ref){
+        if(!refIndex[p.ref]) refIndex[p.ref]=new Set();
+        refIndex[p.ref].add(m.brand+' '+m.model);
+      }
+      // Similares também
+      (p.similarities||[]).forEach(sim=>{
+        if(!refIndex[sim]) refIndex[sim]=new Set();
+        refIndex[sim].add(m.brand+' '+m.model);
+      });
+    });
+  });
+
+  return`<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Peça</th>
+      <th>Ref. / Código
+        <i class="tooltip-icon" style="margin-left:3px" data-tip="Código do fabricante ou do fornecedor. Códigos similares são alternativas compatíveis.">?</i>
+      </th>
+      <th>Intervalo</th>
+      <th>Fornecedor</th>
+      <th>Similares
+        <i class="tooltip-icon" style="margin-left:3px" data-tip="Referências alternativas compatíveis. Clique em qualquer código para copiar.">?</i>
+      </th>
+      <th>Aplicações
+        <i class="tooltip-icon" style="margin-left:3px" data-tip="Outros modelos no catálogo que usam a mesma referência ou similares.">?</i>
+      </th>
+      <th></th>
+    </tr></thead>
+    <tbody>${parts.map(p=>{
+      // Calcular aplicações cruzadas desta referência
+      const appsSet=new Set();
+      if(p.ref&&refIndex[p.ref]){refIndex[p.ref].forEach(a=>{if(a!==getModel(modelId)?.brand+' '+getModel(modelId)?.model) appsSet.add(a);});}
+      (p.similarities||[]).forEach(sim=>{if(refIndex[sim]){refIndex[sim].forEach(a=>{if(a!==getModel(modelId)?.brand+' '+getModel(modelId)?.model) appsSet.add(a);});}});
+      const apps=[...appsSet];
+
+      return`<tr>
+        <td>
+          <div class="td-name">${p.name}${p.criticality==='alta'?'<span style="background:var(--orange-light);color:var(--orange);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:5px">CRÍTICO</span>':p.criticality==='segurança'?'<span style="background:var(--red-light);color:var(--red);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:5px">NR</span>':''}</div>
+          ${p.obs?`<div class="td-obs">${p.obs}</div>`:''}
+        </td>
+        <td>
+          ${p.ref?`<span class="td-ref" style="cursor:pointer" title="Clique para copiar" onclick="navigator.clipboard?.writeText('${p.ref}');this.textContent='✓ copiado!';setTimeout(()=>this.textContent='${p.ref}',1500)">${p.ref}</span>`:'<span style="color:var(--text3)">—</span>'}
+        </td>
+        <td><span style="font-size:12px;${p.interval?'color:var(--text2)':'color:var(--text3)'}">${p.interval?p.interval+'h':'—'}</span></td>
+        <td>${p.supplier?`<span class="td-supplier">${p.supplier}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+        <td>
+          ${(p.similarities||[]).length?`<div class="sim-row">${p.similarities.map(s=>`<span class="sim-tag" style="cursor:pointer" title="Clique para copiar" onclick="navigator.clipboard?.writeText('${s}');this.style.background='var(--green-light)';this.style.color='var(--green)';setTimeout(()=>{this.style.background='';this.style.color='';},1200)">${s}</span>`).join('')}</div>`:'<span style="color:var(--text3);font-size:11px">—</span>'}
+        </td>
+        <td>
+          ${apps.length?`<div style="font-size:10px;color:var(--text2);line-height:1.5">${apps.slice(0,2).join('<br>')}${apps.length>2?`<span style="color:var(--text3)"> +${apps.length-2}</span>`:''}</div>`:'<span style="color:var(--text3);font-size:10px">—</span>'}
+        </td>
+        <td><div class="row-actions">
+          <button class="btn btn-secondary btn-sm" onclick="openEditPart('${modelId}','${type}',${subId?`'${subId}'`:'null'},'${p.id}')">Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePart('${modelId}','${type}',${subId?`'${subId}'`:'null'},'${p.id}')">×</button>
+        </div></td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderSubsystem(modelId,s){
+  const key=modelId+s.id, open=!collapsedSubs[key];
+  const catIcons={'Unidade Compressora':'⚙','Sistema de Lubrificação':'🛢','Sistema de Resfriamento':'❄','Sistema de Controle':'🖥','Quadro Elétrico / Motor':'⚡','Sistema de Admissão e Filtração':'🌬','Sistema Pneumático / Válvulas':'🔧','Transmissão (correia/acoplamento)':'⛓','Vedações e Juntas':'🔒','Estrutura e Gabinete':'📦'};
+  const icon=catIcons[s.category]||'⚙';
+  return`<div class="sub-block">
+    <div class="sub-head" onclick="toggleSub('${key}')">
+      <div class="sub-head-left">
+        <div class="sub-icon">${icon}</div>
+        <span class="sub-name">${s.name}</span>
+        ${s.category?`<span class="sub-type">${s.category}</span>`:''}
+        <span class="sub-count">${s.parts.length} peça${s.parts.length!==1?'s':''}</span>
+        ${s.interval?`<span style="font-size:10px;color:var(--text3);background:var(--gray-100);padding:1px 6px;border-radius:10px">${s.interval}h</span>`:''}
+      </div>
+      <div class="sub-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-secondary btn-sm" onclick="openEditSub('${modelId}','${s.id}')">Editar</button>
+        <button class="btn btn-primary btn-sm" onclick="openAddPart('${modelId}','sub','${s.id}')">+ Peça</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSub('${modelId}','${s.id}')">×</button>
+        <span class="chevron ${open?'open':''}">▶</span>
+      </div>
+    </div>
+    <div class="sub-body" id="sb_${key}" style="${open?'':'display:none'}">
+      ${s.desc?`<div style="padding:7px 13px;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);background:var(--blue-pale)">${s.desc}</div>`:''}
+      ${renderPartsTable(s.parts,modelId,'sub',s.id)}
+    </div>
+  </div>`;
+}
+
+function toggleSub(key){
+  collapsedSubs[key]=!collapsedSubs[key];
+  const curTab=document.getElementById('tabSubs').classList.contains('active')?'subs':document.getElementById('tabPhotos').classList.contains('active')?'photos':'direct';
+  renderCatalog(); switchTab(curTab);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHOTOS
+// ═══════════════════════════════════════════════════════════
+function renderPhotosGrid(photos,targetType,targetId){
+  return`<div class="photos-grid">
+    ${(photos||[]).map((ph,i)=>`<div class="photo-thumb" onclick="openLightbox('${ph.data}')">
+      <img src="${ph.data}" alt="${ph.label||''}">
+      <div class="photo-label">${ph.label||''}</div>
+      <button class="photo-del" onclick="event.stopPropagation();deletePhoto('${targetType}','${targetId}',${i})">×</button>
+    </div>`).join('')}
+    <button class="btn-add-photo" onclick="triggerPhotoUpload('${targetType}','${targetId}')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+      <span>Adicionar<br>fotos</span>
+    </button>
+  </div>`;
+}
+
+function triggerPhotoUpload(type,id){
+  currentPhotoTarget={type,id};
+  document.getElementById('photoInput').value='';
+  document.getElementById('photoInput').click();
+}
+
+function handlePhotoUpload(input){
+  if(!input.files||!input.files.length||!currentPhotoTarget) return;
+  const{type,id}=currentPhotoTarget;
+  const files=Array.from(input.files);
+  let done=0;
+  files.forEach(file=>{
+    if(!file.type.startsWith('image/')) return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const photo={id:uid(),data:e.target.result,label:file.name.replace(/\.[^.]+$/,''),ts:Date.now()};
+      let target;
+      if(type==='model'){
+        target=db.models.find(m=>m.id===id);
+        if(target){if(!target.photos)target.photos=[];target.photos.push(photo)}
+      } else {
+        target=db.machines.find(m=>m.id===id);
+        if(target){if(!target.photos)target.photos=[];target.photos.push(photo)}
+      }
+      done++;
+      if(done===files.length){
+        save();
+        if(type==='model') renderCatalog(),switchTab('photos');
+        else renderMachines();
+        toast(`${files.length} foto${files.length>1?'s':''} adicionada${files.length>1?'s':''}!`,'success');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function deletePhoto(type,id,idx){
+  if(!confirm('Excluir esta foto?')) return;
+  if(type==='model'){const m=db.models.find(x=>x.id===id);if(m)m.photos.splice(idx,1)}
+  else{const eq=db.machines.find(x=>x.id===id);if(eq)eq.photos.splice(idx,1)}
+  save();
+  if(type==='model') renderCatalog(),switchTab('photos');
+  else renderMachines();
+  toast('Foto excluída');
+}
+
+function openLightbox(src){
+  document.getElementById('lightboxImg').src=src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open')}
+
+// ═══════════════════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════════════════
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.overlay').forEach(el=>el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open')}));
+
+// ── MODEL MODAL ──
+function openModalModel(id=null){
+  editModelId=id;
+  document.getElementById('modalModelTitle').textContent=id?'Editar modelo':'Novo modelo de equipamento';
+  document.getElementById('dupModelAlert').classList.remove('show');
+  if(id){
+    const m=getModel(id);
+    ['mBrand','mModel','mObs','mPower','mPressure','mFlow','mVoltage','mAmpere'].forEach(k=>{
+      const key=k.replace('m','').toLowerCase();
+      const el=document.getElementById(k);
+      if(el) el.value=m[key]||'';
+    });
+    document.getElementById('mType').value=m.type||'Compressor Parafuso';
+  } else {
+    ['mBrand','mModel','mObs','mPower','mPressure','mFlow','mVoltage','mAmpere'].forEach(k=>{
+      const el=document.getElementById(k);if(el)el.value='';
+    });
+    document.getElementById('mType').value='Compressor Parafuso';
+    // Watch brand+model for duplicates
+    document.getElementById('mBrand').oninput=document.getElementById('mModel').oninput=checkModelDuplicates;
+  }
+  openModal('modalModel');
+}
+
+function checkModelDuplicates(){
+  const brand=document.getElementById('mBrand').value.trim();
+  const model=document.getElementById('mModel').value.trim();
+  if(!brand||!model.length<2){document.getElementById('dupModelAlert').classList.remove('show');return}
+  const key=modelKey(brand,model);
+  const dups=db.models.filter(m=>modelKey(m.brand,m.model)===key||(m.brand.toLowerCase()===brand.toLowerCase()&&m.model.toLowerCase().includes(model.toLowerCase().slice(0,4))));
+  if(dups.length){
+    document.getElementById('dupModelAlert').classList.add('show');
+    document.getElementById('dupModelList').innerHTML=dups.map(m=>`
+      <div class="dup-item">
+        <span class="dup-item-info">${m.brand} ${m.model}</span>
+        <div class="dup-actions">
+          <button class="btn btn-success btn-xs" onclick="selectModel('${m.id}');closeModal('modalModel')">Usar este</button>
+          <button class="btn btn-secondary btn-xs" onclick="document.getElementById('dupModelAlert').classList.remove('show')">Criar mesmo assim</button>
+        </div>
+      </div>`).join('');
+  } else {
+    document.getElementById('dupModelAlert').classList.remove('show');
+  }
+}
+
+function saveModel(){
+  const brand=document.getElementById('mBrand').value.trim();
+  const model=document.getElementById('mModel').value.trim();
+  if(!brand||!model){toast('Informe marca e modelo','error');return}
+  const data={
+    brand,model,
+    type:document.getElementById('mType').value,
+    power:document.getElementById('mPower').value.trim(),
+    pressure:document.getElementById('mPressure').value.trim(),
+    flow:document.getElementById('mFlow').value.trim(),
+    voltage:document.getElementById('mVoltage').value.trim(),
+    ampere:document.getElementById('mAmpere').value.trim(),
+    obs:document.getElementById('mObs').value.trim()
+  };
+  if(editModelId){
+    Object.assign(getModel(editModelId),data);
+    editModelId=null;
+    toast('Modelo atualizado','success');
+  } else {
+    const nm={id:uid(),...data,directParts:[],subsystems:[],photos:[]};
+    db.models.push(nm); selModelId=nm.id;
+    toast('Modelo criado','success');
+    syncToGS('saveModel',{model:nm});
+  }
+  save(); closeModal('modalModel'); renderSidebar(); renderCatalog();
+}
+
+function deleteModel(id){
+  if(!confirm('Excluir modelo e todas as suas peças?')) return;
+  db.models=db.models.filter(m=>m.id!==id);
+  selModelId=db.models.length?db.models[0].id:null;
+  save(); renderSidebar(); renderCatalog();
+  toast('Modelo excluído');
+}
+
+// ── SUBSYSTEM MODAL ──
+function openAddSub(modelId){
+  editSubModelId=modelId; editSubId=null;
+  document.getElementById('modalSubTitle').textContent='Novo subsistema / conjunto';
+  ['subName','subDesc'].forEach(k=>{document.getElementById(k).value=''});
+  document.getElementById('subCategory').value='';
+  document.getElementById('subInterval').value='';
+  openModal('modalSub');
+}
+
+function openEditSub(modelId,subId){
+  editSubModelId=modelId; editSubId=subId;
+  document.getElementById('modalSubTitle').textContent='Editar subsistema';
+  const m=getModel(modelId);
+  const s=m.subsystems.find(x=>x.id===subId);
+  document.getElementById('subName').value=s.name||'';
+  document.getElementById('subDesc').value=s.desc||'';
+  document.getElementById('subCategory').value=s.category||'';
+  document.getElementById('subInterval').value=s.interval||'';
+  openModal('modalSub');
+}
+
+function saveSub(){
+  const name=document.getElementById('subName').value.trim();
+  if(!name){toast('Informe o nome','error');return}
+  const data={name,desc:document.getElementById('subDesc').value.trim(),category:document.getElementById('subCategory').value,interval:parseInt(document.getElementById('subInterval').value)||0};
+  const m=getModel(editSubModelId);
+  if(editSubId){
+    const s=m.subsystems.find(x=>x.id===editSubId);
+    Object.assign(s,data);
+    toast('Subsistema atualizado','success');
+  } else {
+    m.subsystems.push({id:uid(),...data,parts:[]});
+    toast('Subsistema criado','success');
+  }
+  save(); closeModal('modalSub'); renderCatalog(); switchTab('subs');
+}
+
+function deleteSub(modelId,subId){
+  if(!confirm('Excluir subsistema e todas as suas peças?')) return;
+  const m=getModel(modelId);
+  m.subsystems=m.subsystems.filter(s=>s.id!==subId);
+  save(); renderCatalog(); switchTab('subs');
+  toast('Subsistema excluído');
+}
+
+// ── PART MODAL ──
+function openAddPart(modelId,type,subId){
+  addPartTarget={modelId,type,subId}; editPartTarget=null; currentSims=[];
+  document.getElementById('modalPartTitle').textContent='Nova peça';
+  ['pName','pRef','pSupplier','pObs','simInput'].forEach(k=>{document.getElementById(k).value=''});
+  document.getElementById('pQty').value=1;
+  document.getElementById('pInterval').value='';
+  document.getElementById('pCost').value='';
+  document.getElementById('pCriticality').value='normal';
+  renderSimTags();
+  openModal('modalPart');
+}
+
+function openEditPart(modelId,type,subId,partId){
+  const m=getModel(modelId);
+  let part;
+  if(type==='direct') part=m.directParts.find(p=>p.id===partId);
+  else{const s=m.subsystems.find(s=>s.id===subId);part=s.parts.find(p=>p.id===partId)}
+  editPartTarget={modelId,type,subId,partId}; addPartTarget=null;
+  document.getElementById('modalPartTitle').textContent='Editar peça';
+  document.getElementById('pName').value=part.name||'';
+  document.getElementById('pRef').value=part.ref||'';
+  document.getElementById('pInterval').value=part.interval||'';
+  document.getElementById('pQty').value=part.qty||1;
+  document.getElementById('pSupplier').value=part.supplier||'';
+  document.getElementById('pCost').value=part.cost||'';
+  document.getElementById('pCriticality').value=part.criticality||'normal';
+  document.getElementById('pObs').value=part.obs||'';
+  currentSims=[...(part.similarities||[])];
+  renderSimTags();
+  openModal('modalPart');
+}
+
+function addSim(){
+  const inp=document.getElementById('simInput');
+  const val=inp.value.trim();
+  if(!val||currentSims.includes(val)) return;
+  currentSims.push(val); inp.value=''; renderSimTags();
+}
+
+function removeSim(idx){currentSims.splice(idx,1);renderSimTags()}
+
+function renderSimTags(){
+  document.getElementById('simTags').innerHTML=currentSims.map((s,i)=>
+    `<span class="sim-tag">${s}<span class="sim-rm" onclick="removeSim(${i})">×</span></span>`
+  ).join('');
+}
+
+function savePart(){
+  const name=document.getElementById('pName').value.trim();
+  if(!name){toast('Informe o nome da peça','error');return}
+  const data={
+    name,
+    ref:document.getElementById('pRef').value.trim(),
+    interval:parseInt(document.getElementById('pInterval').value)||0,
+    qty:parseInt(document.getElementById('pQty').value)||1,
+    supplier:document.getElementById('pSupplier').value.trim(),
+    cost:parseFloat(document.getElementById('pCost').value)||0,
+    criticality:document.getElementById('pCriticality').value,
+    obs:document.getElementById('pObs').value.trim(),
+    similarities:[...currentSims]
+  };
+  if(editPartTarget){
+    const{modelId,type,subId,partId}=editPartTarget;
+    const m=getModel(modelId);
+    if(type==='direct'){const p=m.directParts.find(p=>p.id===partId);Object.assign(p,data)}
+    else{const s=m.subsystems.find(s=>s.id===subId);const p=s.parts.find(p=>p.id===partId);Object.assign(p,data)}
+    const wasSubTab=editPartTarget.type==='sub';
+    save(); closeModal('modalPart'); renderCatalog(); if(wasSubTab)switchTab('subs');
+    toast('Peça atualizada','success');
+  } else {
+    const{modelId,type,subId}=addPartTarget;
+    const m=getModel(modelId); data.id=uid();
+    if(type==='direct') m.directParts.push(data);
+    else{const s=m.subsystems.find(s=>s.id===subId);s.parts.push(data)}
+    save(); closeModal('modalPart'); renderCatalog(); if(type==='sub')switchTab('subs');
+    toast('Peça adicionada','success');
+  }
+  syncToGS('saveModel',{model:getModel(selModelId)});
+}
+
+function deletePart(modelId,type,subId,partId){
+  if(!confirm('Excluir esta peça?')) return;
+  const m=getModel(modelId);
+  if(type==='direct') m.directParts=m.directParts.filter(p=>p.id!==partId);
+  else{const s=m.subsystems.find(s=>s.id===subId);s.parts=s.parts.filter(p=>p.id!==partId)}
+  save(); renderCatalog();
+  toast('Peça excluída');
+}
+
+// ═══════════════════════════════════════════════════════════
+// MACHINES VIEW
+// ═══════════════════════════════════════════════════════════
+function modelKey(brand,model){return((brand||'')+(model||'')).toLowerCase().replace(/\s/g,'')}
+
+function checkMachineModelMatch(modelStr){
+  const brand=document.getElementById('mcBrand').value.trim();
+  const el=document.getElementById('mcModelMatchAlert');
+  if(!modelStr||!brand){el.style.display='none';return}
+  const key=modelKey(brand,modelStr);
+  const found=db.models.find(m=>modelKey(m.brand,m.model)===key||modelKey(m.brand,m.model).includes(key)||key.includes(modelKey(m.brand,m.model).slice(0,4)));
+  if(found){
+    el.style.display='block';
+    el.innerHTML=`✓ Modelo <strong>${found.brand} ${found.model}</strong> encontrado no catálogo — peças e intervalos serão vinculados automaticamente.`;
+    // Check for similar existing machines
+    const sims=db.machines.filter(eq=>modelKey(eq.brand,eq.model)===modelKey(found.brand,found.model));
+    if(sims.length){
+      const alert2=document.getElementById('dupMachineAlert');
+      alert2.classList.add('show');
+      document.getElementById('dupMachineList').innerHTML=sims.map(eq=>`
+        <div class="dup-item">
+          <span class="dup-item-info">${eq.brand} ${eq.model} — ${eq.client}${eq.serial?' (S/N: '+eq.serial+')':''}</span>
+          <span style="font-size:10px;color:var(--text3)">Modelo idêntico já cadastrado</span>
+        </div>`).join('');
+    }
+  } else {
+    el.style.display='none';
+    document.getElementById('dupMachineAlert').classList.remove('show');
+  }
+}
+
+function suggestClient(val){
+  const dl=document.getElementById('clientSuggestions');
+  const matches=[...new Set([...PGP_CLIENTS,...db.machines.map(m=>m.client)])].filter(c=>c.toLowerCase().includes(val.toLowerCase())).slice(0,8);
+  dl.innerHTML=matches.map(c=>`<option value="${c}">`).join('');
+}
+
+function openModalMachine(id=null){
+  editMachineId=id;
+  document.getElementById('modalMachineTitle').textContent=id?'Editar máquina':'Nova máquina (PGP)';
+  document.getElementById('dupMachineAlert').classList.remove('show');
+  document.getElementById('mcModelMatchAlert').style.display='none';
+  const fields=['mcClient','mcBranch','mcCnpj','mcContact','mcPhone','mcEmail','mcCity','mcBrand','mcModel','mcSerial','mcTag','mcLocation','mcPower','mcObs','mcDriveLink'];
+  if(id){
+    const eq=db.machines.find(m=>m.id===id);
+    const map={mcClient:'client',mcBranch:'branch',mcCnpj:'cnpj',mcContact:'contact',mcPhone:'phone',mcEmail:'email',mcCity:'city',mcBrand:'brand',mcModel:'model',mcSerial:'serial',mcTag:'tag',mcLocation:'location',mcPower:'power',mcObs:'obs',mcDriveLink:'driveLink'};
+    Object.entries(map).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=eq[v]||''});
+    document.getElementById('mcYear').value=eq.year||'';
+    document.getElementById('mcHour').value=eq.hourTotal||'';
+    document.getElementById('mcHpw').value=eq.hpw||'';
+    document.getElementById('mcType').value=eq.type||'Compressor Parafuso';
+    document.getElementById('mcLastVisit').value=eq.lastVisit||'';
+    document.getElementById('mcNextVisit').value=eq.nextVisit||'';
+  } else {
+    fields.forEach(k=>{const el=document.getElementById(k);if(el)el.value=''});
+    ['mcYear','mcHour','mcHpw','mcLastVisit','mcNextVisit'].forEach(k=>{const el=document.getElementById(k);if(el)el.value=''});
+    document.getElementById('mcType').value='Compressor Parafuso';
+  }
+  openModal('modalMachine');
+}
+
+function saveMachine(){
+  const client=document.getElementById('mcClient').value.trim();
+  const brand=document.getElementById('mcBrand').value.trim();
+  const model=document.getElementById('mcModel').value.trim();
+  if(!client||!brand||!model){toast('Informe cliente, marca e modelo','error');return}
+  const data={
+    client,branch:document.getElementById('mcBranch').value.trim(),
+    cnpj:document.getElementById('mcCnpj').value.trim(),
+    contact:document.getElementById('mcContact').value.trim(),
+    phone:document.getElementById('mcPhone').value.trim(),
+    email:document.getElementById('mcEmail').value.trim(),
+    city:document.getElementById('mcCity').value.trim(),
+    brand,model,type:document.getElementById('mcType').value,
+    serial:document.getElementById('mcSerial').value.trim(),
+    year:parseInt(document.getElementById('mcYear').value)||null,
+    tag:document.getElementById('mcTag').value.trim(),
+    location:document.getElementById('mcLocation').value.trim(),
+    power:document.getElementById('mcPower').value.trim(),
+    hourTotal:parseInt(document.getElementById('mcHour').value)||0,
+    hpw:parseInt(document.getElementById('mcHpw').value)||0,
+    obs:document.getElementById('mcObs').value.trim(),
+    driveLink:document.getElementById('mcDriveLink').value.trim(),
+    lastVisit:document.getElementById('mcLastVisit').value,
+    nextVisit:document.getElementById('mcNextVisit').value,
+    updatedAt:new Date().toISOString()
+  };
+  if(editMachineId){
+    const eq=db.machines.find(m=>m.id===editMachineId);
+    if(!eq.photos) eq.photos=[];
+    Object.assign(eq,data);
+    editMachineId=null;
+    toast('Máquina atualizada','success');
+  } else {
+    data.id=uid(); data.photos=data.photos||[]; data.parts={};
+    db.machines.push(data);
+    toast('Máquina cadastrada','success');
+  }
+  save(); closeModal('modalMachine'); renderMachines(); renderSidebar();
+  syncToGS('saveMachine',{machine:data});
+}
+
+function deleteMachine(id){
+  if(!confirm('Excluir este equipamento?')) return;
+  db.machines=db.machines.filter(m=>m.id!==id);
+  save(); renderMachines(); renderSidebar();
+  toast('Máquina excluída');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PEÇAS PADRÃO — 9 peças base de todo compressor de parafuso
+// ═══════════════════════════════════════════════════════════
+const DEFAULT_PARTS = [
+  {id:'filtro_oleo',      name:'Filtro de Óleo',          interval:2000},
+  {id:'filtro_ar_prim',   name:'Filtro de Ar Primário',   interval:2000},
+  {id:'filtro_ar_secu',   name:'Filtro de Ar Secundário', interval:4000},
+  {id:'separador',        name:'Separador Ar/Óleo',       interval:4000},
+  {id:'oleo_lubrif',      name:'Óleo Lubrificante',       interval:2000},
+  {id:'v_termostatica',   name:'Válvula Termostática',    interval:8000},
+  {id:'v_admissao',       name:'Válvula de Admissão',     interval:8000},
+  {id:'v_pressao_min',    name:'Válvula Pressão Mínima',  interval:8000},
+  {id:'correia',          name:'Correia',                 interval:4000},
+];
+
+let _mdetMachineId = null;
+
+function switchMdetTab(tab){
+  document.querySelectorAll('.mdet-tab').forEach((b,i)=>{
+    const tabs=['resumo','pecas','fotos'];
+    b.classList.toggle('active', tabs[i]===tab);
+  });
+  document.querySelectorAll('.mdet-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('mdet'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+  document.getElementById('mdetSaveBtn').style.display = tab==='pecas'?'':'none';
+}
+
+function openMachineDetail(id){
+  _mdetMachineId = id;
+  editMachineId = id;
+  const eq = db.machines.find(m=>m.id===id);
+  if(!eq) return;
+
+  const hourTotal = eq.hourTotal||0;
+  const hpw = eq.hpw||0;
+  const clientReg = db.clients ? db.clients.find(c=>c.nome.toLowerCase().trim()===(eq.client||'').toLowerCase().trim()) : null;
+  const driveUrl = clientReg?.drive_url || eq.driveLink || '';
+
+  document.getElementById('modalMachinePartsTitle').textContent = `${eq.brand} ${eq.model} — ${eq.client}`;
+
+  // ── ABA RESUMO ──
+  document.getElementById('mdetResumo').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;font-size:12px;margin-bottom:14px">
+      <div><span style="color:var(--text3)">Série:</span> <strong>${eq.serial||'—'}</strong></div>
+      <div><span style="color:var(--text3)">TAG:</span> <strong>${eq.tag||'—'}</strong></div>
+      <div><span style="color:var(--text3)">Horímetro:</span> <strong style="color:var(--blue-mid);font-family:'IBM Plex Mono',monospace">${hourTotal.toLocaleString('pt-BR')}h</strong></div>
+      <div><span style="color:var(--text3)">h/Semana:</span> <strong>${hpw||'—'}h</strong></div>
+      <div><span style="color:var(--text3)">Localização:</span> <strong>${eq.location||'—'}</strong></div>
+      <div><span style="color:var(--text3)">Ano:</span> <strong>${eq.year||'—'}</strong></div>
+      ${eq.contact?`<div><span style="color:var(--text3)">Contato:</span> <strong>${eq.contact}</strong></div>`:''}
+      ${eq.phone?`<div><span style="color:var(--text3)">Tel:</span> <strong>${eq.phone}</strong></div>`:''}
+      ${eq.lastVisit?`<div><span style="color:var(--text3)">Últ. visita:</span> <strong>${eq.lastVisit}</strong></div>`:''}
+      ${eq.nextVisit?`<div><span style="color:var(--text3)">Próx. visita:</span> <strong>${eq.nextVisit}</strong></div>`:''}
+      ${driveUrl?`<div style="grid-column:1/-1">📁 <a href="${driveUrl}" target="_blank" style="color:var(--blue-mid)">Abrir pasta do Drive</a></div>`:''}
+      ${clientReg?.antecedencia_alerta_dias?`<div style="grid-column:1/-1"><span class="client-alerta-badge">🔔 Alerta ${clientReg.antecedencia_alerta_dias} dias antes do vencimento</span></div>`:''}
+    </div>
+    ${_buildPartsReadTable(eq, hourTotal, hpw)}
+    <div style="display:flex;gap:6px;margin-top:14px;padding-top:10px;border-top:1px solid var(--border);flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="openModalMachine('${id}');closeModal('modalMachineParts')">Editar dados</button>
+      <button class="btn btn-secondary btn-sm" onclick="switchMdetTab('pecas')">✏️ Editar peças</button>
+      <button class="btn btn-secondary btn-sm" onclick="promoverAoCatalogo('${id}')">📋 Promover ao catálogo</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteMachine('${id}');closeModal('modalMachineParts')">Excluir</button>
+    </div>`;
+
+  // ── ABA PEÇAS (edição) ──
+  _renderPartsEditor(eq);
+
+  // ── ABA FOTOS ──
+  document.getElementById('mdetFotos').innerHTML =
+    `<div style="font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Fotos da máquina</div>
+    ${renderPhotosGrid(eq.photos||[],'machine',id)}`;
+
+  // Badge de peças com problema
+  const ws = _getMachineWorst(eq);
+  document.getElementById('mdetPecasBadge').innerHTML = ws
+    ? `<span style="background:${ws.level==='vencido'?'#fee2e2':'#fef3c7'};color:${ws.level==='vencido'?'#b91c1c':'#b45309'};font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">${ws.count}</span>`
+    : '';
+
+  // Resetar para aba resumo
+  switchMdetTab('resumo');
+  openModal('modalMachineParts');
+}
+
+function _getMachineWorst(eq){
+  const parts = _getEffectiveParts(eq);
+  let cv=0, ca=0;
+  parts.forEach(p=>{
+    if(p.na) return;
+    const {status}=calcPartStatus(p.lastChange||0, p.interval, eq.hourTotal||0);
+    if(status==='vencido') cv++;
+    else if(status==='alerta') ca++;
+  });
+  if(cv>0) return {level:'vencido',count:cv};
+  if(ca>0) return {level:'alerta',count:ca};
+  return null;
+}
+
+// Retorna lista unificada: 9 padrão + extras da máquina
+function _getEffectiveParts(eq){
+  const stored = eq.parts || {};
+  // Começar com as 9 padrão
+  const list = DEFAULT_PARTS.map(dp => ({
+    id: dp.id,
+    name: (stored[dp.id]?.name) || dp.name,
+    interval: (stored[dp.id]?.interval) || dp.interval,
+    lastChange: stored[dp.id]?.lastChange || 0,
+    ref: stored[dp.id]?.ref || '',
+    na: stored[dp.id]?.na || false,
+    _default: true
+  }));
+  // Adicionar peças extras (não padrão)
+  const defaultIds = new Set(DEFAULT_PARTS.map(d=>d.id));
+  Object.entries(stored).forEach(([pid, ps])=>{
+    if(!defaultIds.has(pid)){
+      list.push({id:pid, name:ps.name||pid, interval:ps.interval||2000,
+        lastChange:ps.lastChange||0, ref:ps.ref||'', na:ps.na||false, _default:false});
+    }
+  });
+  return list;
+}
+
+function _buildPartsReadTable(eq, hourTotal, hpw){
+  const parts = _getEffectiveParts(eq);
+  const hasParts = parts.some(p=>!p.na&&(p.lastChange>0||p.interval>0));
+  if(!hasParts) return `<div style="background:var(--orange-light);border-left:3px solid var(--orange);padding:10px 14px;border-radius:var(--radius);font-size:12px;color:#92400e">
+    ⚠ Nenhum dado de peça registrado. Clique em <strong>✏️ Editar peças</strong> para lançar os horímetros.</div>`;
+
+  return `<div style="font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Status das Peças</div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Peça</th><th>Intervalo</th><th>Últ. troca</th><th>Próx. troca</th><th>H. rest.</th><th>Dias rest.</th><th>Status</th></tr></thead>
+    <tbody>${parts.map(p=>{
+      if(p.na) return `<tr><td><div class="td-name">${p.name}</div></td><td colspan="5" style="color:var(--text3);font-size:11px">—</td><td>${statusBadge('n/a')}</td></tr>`;
+      const {status,remaining,next}=calcPartStatus(p.lastChange,p.interval,hourTotal);
+      const daysRem=(remaining!==null&&hpw>0)?Math.round(remaining/(hpw/7)):null;
+      const dStyle=daysRem!==null&&daysRem<=0?'color:var(--red);font-weight:700':daysRem!==null&&daysRem<=30?'color:var(--orange);font-weight:700':'';
+      return `<tr>
+        <td><div class="td-name">${p.name}</div>${p.ref?`<div class="td-ref">${p.ref}</div>`:''}</td>
+        <td>${p.interval?p.interval+'h':'—'}</td>
+        <td>${p.lastChange?p.lastChange+'h':'—'}</td>
+        <td>${next?next+'h':'—'}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px">${remaining!==null?remaining.toLocaleString('pt-BR')+'h':'—'}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;${dStyle}">${daysRem!==null?daysRem+'d':'—'}</td>
+        <td>${statusBadge(status)}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function _renderPartsEditor(eq){
+  const parts = _getEffectiveParts(eq);
+  const rows = parts.map((p,i)=>`
+    <tr id="perow-${i}" class="${p.na?'part-na':''}">
+      <td style="min-width:150px">
+        <input class="pe-input" style="font-family:'IBM Plex Sans',monospace" value="${p.name}" id="pe-name-${i}" placeholder="Nome da peça">
+      </td>
+      <td style="width:90px"><input class="pe-input" type="number" value="${p.lastChange||''}" id="pe-last-${i}" placeholder="ex: 5091"></td>
+      <td style="width:90px"><input class="pe-input" type="number" value="${p.interval||''}" id="pe-int-${i}" placeholder="ex: 2000"></td>
+      <td style="width:110px"><input class="pe-input" value="${p.ref||''}" id="pe-ref-${i}" placeholder="ex: W962"></td>
+      <td style="width:60px;text-align:center">
+        <button class="pe-na-btn ${p.na?'active':''}" id="pe-na-${i}" onclick="togglePeNA(${i})">N/A</button>
+      </td>
+      <td style="width:36px;text-align:center">
+        ${!p._default?`<button class="pe-del-btn" onclick="removePeRow(${i})" title="Remover">×</button>`:'<span style="color:var(--text3);font-size:10px">—</span>'}
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('mdetPecas').innerHTML = `
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px">
+      Edite os horímetros de <strong>última troca</strong> e <strong>intervalo</strong> de cada peça.
+      As 9 peças padrão não podem ser removidas, apenas marcadas como N/A.
+    </div>
+    <div style="overflow-x:auto">
+      <table class="parts-edit-table">
+        <thead><tr>
+          <th>Peça</th>
+          <th>Últ. troca (h)</th>
+          <th>Intervalo (h)</th>
+          <th>Referência</th>
+          <th style="text-align:center">N/A</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="peTableBody">${rows}</tbody>
+      </table>
+    </div>
+    <div class="pe-add-row">
+      <input class="form-input" id="peNewName" placeholder="Nome da nova peça (ex: Rolamento dianteiro)" style="flex:1">
+      <input class="form-input" type="number" id="peNewInterval" placeholder="Intervalo (h)" style="width:130px">
+      <button class="btn btn-secondary" onclick="addPeRow()">＋ Adicionar peça</button>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:6px">
+      💡 O horímetro atual desta máquina é <strong>${(eq.hourTotal||0).toLocaleString('pt-BR')}h</strong>. 
+      Use esse valor como referência para lançar a última troca das peças que estão instaladas hoje.
+    </div>`;
+}
+
+function togglePeNA(i){
+  const btn = document.getElementById(`pe-na-${i}`);
+  const row = document.getElementById(`perow-${i}`);
+  btn.classList.toggle('active');
+  row.classList.toggle('part-na');
+}
+
+function addPeRow(){
+  const name = document.getElementById('peNewName').value.trim();
+  if(!name){toast('Informe o nome da peça','error');return;}
+  const intv = document.getElementById('peNewInterval').value.trim();
+  const tbody = document.getElementById('peTableBody');
+  const i = tbody.querySelectorAll('tr').length;
+  const tr = document.createElement('tr');
+  tr.id = `perow-${i}`;
+  tr.innerHTML = `
+    <td><input class="pe-input" style="font-family:'IBM Plex Sans',monospace" value="${name}" id="pe-name-${i}" placeholder="Nome da peça"></td>
+    <td><input class="pe-input" type="number" id="pe-last-${i}" placeholder="ex: 0"></td>
+    <td><input class="pe-input" type="number" value="${intv||''}" id="pe-int-${i}" placeholder="ex: 4000"></td>
+    <td><input class="pe-input" id="pe-ref-${i}" placeholder="ex: SKF 6308"></td>
+    <td style="text-align:center"><button class="pe-na-btn" id="pe-na-${i}" onclick="togglePeNA(${i})">N/A</button></td>
+    <td style="text-align:center"><button class="pe-del-btn" onclick="removePeRow(${i})">×</button></td>`;
+  tbody.appendChild(tr);
+  document.getElementById('peNewName').value='';
+  document.getElementById('peNewInterval').value='';
+}
+
+function removePeRow(i){
+  const row = document.getElementById(`perow-${i}`);
+  if(row) row.remove();
+}
+
+function saveMachineParts(){
+  const eq = db.machines.find(m=>m.id===_mdetMachineId);
+  if(!eq) return;
+
+  const tbody = document.getElementById('peTableBody');
+  const rows = tbody.querySelectorAll('tr');
+  const newParts = {};
+
+  rows.forEach((row, i)=>{
+    const nameEl = row.querySelector(`#pe-name-${i}`);
+    const lastEl = row.querySelector(`#pe-last-${i}`);
+    const intEl  = row.querySelector(`#pe-int-${i}`);
+    const refEl  = row.querySelector(`#pe-ref-${i}`);
+    const naBtn  = row.querySelector(`#pe-na-${i}`);
+    if(!nameEl) return;
+
+    const name = nameEl.value.trim();
+    if(!name) return;
+
+    // Determinar ID: se for peça padrão, manter ID; se for extra, gerar slug
+    const defaultIdx = DEFAULT_PARTS.findIndex(d=>d.name===name||(d.id===name));
+    let pid;
+    if(defaultIdx>=0){
+      pid = DEFAULT_PARTS[defaultIdx].id;
+    } else {
+      // Manter ID existente ou gerar novo
+      pid = name.toLowerCase().replace(/[^a-z0-9]/g,'_').replace(/__+/g,'_').slice(0,30)+'_'+i;
+    }
+
+    newParts[pid] = {
+      name,
+      lastChange: parseInt(lastEl?.value||0)||0,
+      interval:   parseInt(intEl?.value||2000)||2000,
+      ref:        refEl?.value.trim()||'',
+      na:         naBtn?.classList.contains('active')||false,
+    };
+  });
+
+  eq.parts = newParts;
+  save();
+
+  // Sincronizar com GAS
+  syncToGS('updateMachineParts',{
+    machine_id: eq.id,
+    hour_total: eq.hourTotal||0,
+    hpw: eq.hpw||0,
+    parts: newParts
+  });
+
+  toast('Peças salvas com sucesso','success');
+
+  // Atualizar aba resumo e badges
+  document.getElementById('mdetResumo').innerHTML = document.getElementById('mdetResumo').innerHTML; // força refresh
+  openMachineDetail(_mdetMachineId); // re-renderiza tudo
+  switchMdetTab('pecas'); // volta para aba de peças
+  renderMachines(); // atualiza badges na tabela
+}
+
+function openMachineDetail_OLD(id){ /* aposentada */ }
+
+// ═══════════════════════════════════════════════════════════
+// PROMOVER MÁQUINA AO CATÁLOGO
+// ═══════════════════════════════════════════════════════════
+function promoverAoCatalogo(machineId){
+  const eq=db.machines.find(m=>m.id===machineId);
+  if(!eq) return;
+
+  // Verificar se já existe modelo com mesma marca/modelo
+  const existing=db.models.find(m=>modelKey(m.brand,m.model)===modelKey(eq.brand,eq.model));
+
+  if(existing){
+    // Já existe — oferecer mesclar referências de peças
+    const partsCount=Object.keys(eq.parts||{}).filter(k=>eq.parts[k].ref).length;
+    const msg=`O modelo "${existing.brand} ${existing.model}" já existe no catálogo.\n\n`+
+      (partsCount>0?`Esta máquina tem ${partsCount} referência(s) de peças que podem ser mescladas ao catálogo.\n\nDeseja mesclar as referências?`:'Deseja abrir o modelo existente?');
+    if(confirm(msg)&&partsCount>0){
+      // Mesclar referências de peças nas peças diretas do catálogo
+      const partIdToName={
+        filtro_oleo:'Filtro de Óleo', filtro_ar_prim:'Filtro de Ar Primário',
+        filtro_ar_secu:'Filtro de Ar Secundário', separador:'Separador Ar/Óleo',
+        oleo_lubrif:'Óleo Lubrificante', v_termostatica:'Válvula Termostática',
+        v_admissao:'Válvula de Admissão', v_pressao_min:'Válvula Pressão Mínima',
+        correia:'Correia',
+      };
+      let merged=0;
+      Object.entries(eq.parts||{}).forEach(([pid,ps])=>{
+        if(!ps.ref) return;
+        const partName=ps.name||partIdToName[pid]||pid;
+        // Procurar peça no catálogo pelo nome
+        const catPart=existing.directParts?.find(p=>p.name.toLowerCase()===partName.toLowerCase());
+        if(catPart&&!catPart.ref){catPart.ref=ps.ref;merged++;}
+        else if(!catPart){
+          // Adicionar peça nova no catálogo
+          if(!existing.directParts) existing.directParts=[];
+          existing.directParts.push({
+            id:'dp-'+uid(),name:partName,ref:ps.ref,
+            interval:ps.interval||2000,qty:1,supplier:'',cost:0,
+            criticality:'normal',similarities:[],obs:''
+          });
+          merged++;
+        }
+      });
+      save();
+      syncToGS('saveModel',{model:existing});
+      toast(`${merged} referência(s) mesclada(s) ao catálogo`,'success');
+    }
+    closeModal('modalMachineParts');
+    selectModel(existing.id);
+    showView('catalog');
+    return;
+  }
+
+  // Não existe — criar novo modelo a partir da máquina
+  if(!confirm(`Criar modelo "${eq.brand} ${eq.model}" no catálogo a partir desta máquina?\n\nAs referências de peças cadastradas serão importadas.`)) return;
+
+  const newModel={
+    id:'m-'+uid(),
+    brand:eq.brand||'',
+    model:eq.model||'',
+    type:eq.type||'Compressor Parafuso',
+    power:eq.power||'',
+    pressure:'',flow:'',voltage:'',ampere:'',obs:'',
+    photos:[],subsystems:[],
+    directParts:[],
+  };
+
+  // Importar peças com referências
+  const partIdToName={
+    filtro_oleo:'Filtro de Óleo',       filtro_ar_prim:'Filtro de Ar Primário',
+    filtro_ar_secu:'Filtro de Ar Secundário', separador:'Separador Ar/Óleo',
+    oleo_lubrif:'Óleo Lubrificante',    v_termostatica:'Válvula Termostática',
+    v_admissao:'Válvula de Admissão',   v_pressao_min:'Válvula Pressão Mínima',
+    correia:'Correia',
+  };
+  const DEFAULT_INT={filtro_oleo:2000,filtro_ar_prim:2000,filtro_ar_secu:4000,separador:4000,oleo_lubrif:2000,v_termostatica:8000,v_admissao:8000,v_pressao_min:8000,correia:4000};
+
+  Object.entries(eq.parts||{}).forEach(([pid,ps])=>{
+    newModel.directParts.push({
+      id:'dp-'+uid(),
+      name:ps.name||partIdToName[pid]||pid,
+      ref:ps.ref||'',
+      interval:ps.interval||DEFAULT_INT[pid]||2000,
+      qty:1,supplier:'',cost:0,criticality:'normal',similarities:[],obs:''
+    });
+  });
+
+  // Se não tinha peças, adicionar as 9 padrão sem referência
+  if(!newModel.directParts.length){
+    Object.entries(partIdToName).forEach(([pid,name])=>{
+      newModel.directParts.push({
+        id:'dp-'+uid(),name,ref:'',
+        interval:DEFAULT_INT[pid]||2000,
+        qty:1,supplier:'',cost:0,criticality:'normal',similarities:[],obs:''
+      });
+    });
+  }
+
+  db.models.push(newModel);
+  save();
+  syncToGS('saveModel',{model:newModel});
+  toast(`Modelo "${newModel.brand} ${newModel.model}" criado no catálogo`,'success');
+  closeModal('modalMachineParts');
+  selectModel(newModel.id);
+  showView('catalog');
+}
+
+let _machFilter=''; // filtro de cliente ativo
+
+function renderMachines(){
+  const el=document.getElementById('viewMachines');
+  if(!el) return;
+
+  const search=(document.getElementById('machineSearchInput')?.value||'').toLowerCase();
+  const byClient={};
+  db.machines.forEach(eq=>{const k=eq.client||'Sem cliente';if(!byClient[k])byClient[k]=[];byClient[k].push(eq)});
+
+  const total=db.machines.length;
+  const nClients=Object.keys(byClient).length;
+  const withModel=db.machines.filter(eq=>db.models.some(m=>modelKey(m.brand,m.model)===modelKey(eq.brand,eq.model))).length;
+  const withPhotos=db.machines.filter(eq=>(eq.photos||[]).length>0).length;
+  const withAlert=db.machines.filter(eq=>{const ws=getMachineWorstStatus(eq);return ws&&(ws.level==='vencido'||ws.level==='alerta');}).length;
+
+  // Filtrar máquinas
+  let machines=db.machines.filter(eq=>{
+    const matchSearch=!search||(eq.client+eq.model+eq.brand+eq.serial+eq.tag).toLowerCase().includes(search);
+    const matchClient=!_machFilter||eq.client===_machFilter;
+    return matchSearch&&matchClient;
+  });
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:18px;font-weight:700">Máquinas PGP</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">
+          ${_machFilter?`Filtrando: <strong>${_machFilter}</strong> <button onclick="_machFilter='';renderMachines()" style="font-size:10px;border:none;background:none;color:var(--blue-mid);cursor:pointer;padding:0">✕ limpar</button>`:'Todos os equipamentos cadastrados'}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="text" id="machineSearchInput" class="form-input" placeholder="Buscar..." style="width:160px" oninput="renderMachines()" value="${search}">
+        <button class="btn btn-primary" onclick="openModalMachine()">+ Nova máquina</button>
+      </div>
+    </div>
+
+    <!-- Stats clicáveis -->
+    <div class="stats-grid" style="margin-bottom:14px">
+      <div class="stat-card ${_machFilter===''&&!search?'':''}">
+        <div class="stat-val">${total}</div>
+        <div class="stat-lbl">Total de equipamentos</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="showView('preventivas');setPrevFilter('vencido')">
+        <div class="stat-val" style="color:var(--red)">${withAlert}</div>
+        <div class="stat-lbl">Com alertas ou vencidas →</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="showView('catalog')">
+        <div class="stat-val" style="color:var(--blue-mid)">${withModel}</div>
+        <div class="stat-lbl">Com modelo no catálogo →</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">${nClients}</div>
+        <div class="stat-lbl">Clientes ativos</div>
+      </div>
+    </div>
+
+    <!-- Filtros por cliente -->
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="prev-filter-btn ${!_machFilter?'active':''}" onclick="_machFilter='';renderMachines()">Todos</button>
+      ${Object.keys(byClient).sort().map(c=>`
+        <button class="prev-filter-btn ${_machFilter===c?'active':''}" onclick="_machFilter='${c.replace(/'/g,"\\'")}';renderMachines()">
+          ${c} <span style="opacity:.7">(${byClient[c].length})</span>
+        </button>`).join('')}
+    </div>
+
+    <!-- Tabela densa -->
+    <div class="table-wrap">
+      <table class="mach-table">
+        <thead><tr>
+          <th>TAG</th>
+          <th>Equipamento</th>
+          <th>Cliente</th>
+          <th>Horímetro</th>
+          <th>Status preventiva</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${machines.length?machines.map(eq=>{
+          const ws=getMachineWorstStatus(eq);
+          return`<tr>
+            <td><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--blue-light);color:var(--blue-mid);padding:2px 7px;border-radius:4px;white-space:nowrap">${eq.tag||'—'}</span></td>
+            <td>
+              <div class="mach-model-name">${eq.brand} ${eq.model}</div>
+              <div class="mach-meta">S/N: ${eq.serial||'—'}${eq.year?' · '+eq.year:''}${eq.power?' · '+eq.power:''}</div>
+            </td>
+            <td>
+              <div style="font-size:12px;font-weight:600">${eq.client||'—'}</div>
+              <div class="mach-meta">${eq.branch||eq.location||'—'}</div>
+            </td>
+            <td>
+              <div class="mach-hora">${(eq.hourTotal||0).toLocaleString('pt-BR')}h</div>
+              <div class="mach-meta">${eq.hpw||'—'} h/sem</div>
+            </td>
+            <td>
+              ${!ws?'<span class="badge-sem">Sem dados</span>':
+                ws.level==='vencido'?`<span class="badge-vencido">⛔ ${ws.label}</span>`:
+                ws.level==='alerta'?`<span class="badge-alerta">⚠ ${ws.label}</span>`:
+                ws.level==='faltando'?`<span class="badge-sem">📋 ${ws.label}</span>`:
+                '<span class="badge-ok">✓ OK</span>'}
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="btn btn-secondary btn-xs" onclick="openMachineDetail('${eq.id}')">Detalhes</button>
+                <button class="btn btn-secondary btn-xs" onclick="openModalMachine('${eq.id}')">Editar</button>
+                <button class="btn btn-danger btn-xs" onclick="deleteMachine('${eq.id}')">×</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join(''):
+        `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma máquina encontrada.</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CLIENTS VIEW
+// ═══════════════════════════════════════════════════════════
+let _clientSort='nome';    // campo de ordenação
+let _clientSortDir='asc';  // 'asc' | 'desc'
+let _clientSearch='';      // busca
+
+function setClientSort(field){
+  if(_clientSort===field) _clientSortDir=_clientSortDir==='asc'?'desc':'asc';
+  else{_clientSort=field;_clientSortDir='asc';}
+  renderClients();
+}
+
+function renderClients(){
+  const el=document.getElementById('viewClients');
+  if(!db.clients) db.clients=[];
+
+  // Enriquecer clientes com dados das máquinas
+  const machinesByClient={};
+  db.machines.forEach(eq=>{
+    const k=(eq.client||'').toLowerCase().trim();
+    if(k){if(!machinesByClient[k])machinesByClient[k]=[];machinesByClient[k].push(eq);}
+  });
+
+  // Busca
+  const q=(document.getElementById('clientSearchInput')?.value||_clientSearch).toLowerCase();
+  _clientSearch=q;
+
+  // Clientes registrados, filtrados e ordenados
+  let registered=db.clients.filter(c=>
+    !q||c.nome.toLowerCase().includes(q)||
+    (c.cidade||'').toLowerCase().includes(q)||
+    (c.cnpj||'').includes(q)||
+    (c.email||'').toLowerCase().includes(q)
+  );
+
+  // Ordenação
+  registered=registered.slice().sort((a,b)=>{
+    let va='', vb='';
+    if(_clientSort==='nome'){va=a.nome;vb=b.nome;}
+    else if(_clientSort==='cidade'){va=a.cidade||'';vb=b.cidade||'';}
+    else if(_clientSort==='maquinas'){
+      va=(machinesByClient[(a.nome||'').toLowerCase().trim()]||[]).length;
+      vb=(machinesByClient[(b.nome||'').toLowerCase().trim()]||[]).length;
+      return _clientSortDir==='asc'?va-vb:vb-va;
+    }
+    else if(_clientSort==='alerta'){va=a.antecedencia_alerta_dias||0;vb=b.antecedencia_alerta_dias||0;return _clientSortDir==='asc'?va-vb:vb-va;}
+    else if(_clientSort==='updatedAt'){va=a.updatedAt||'';vb=b.updatedAt||'';}
+    return _clientSortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
+  });
+
+  // Clientes sem cadastro completo
+  const registeredNames=new Set(db.clients.map(c=>c.nome.toLowerCase().trim()));
+  const unregistered=[];
+  Object.entries(machinesByClient).forEach(([k,eqs])=>{
+    if(!registeredNames.has(k)) unregistered.push({nome:eqs[0].client,eqs});
+  });
+
+  // Stats
+  const total=db.clients.length;
+  const comDrive=db.clients.filter(c=>c.drive_url).length;
+  const comAlerta=db.clients.filter(c=>c.antecedencia_alerta_dias>0).length;
+
+  const sortTh=(field,label,tip='')=>{
+    const cls=_clientSort===field?(_clientSortDir==='asc'?'sort-asc':'sort-desc'):'';
+    const tipHtml=tip?`<i class="tooltip-icon" data-tip="${tip}">?</i>`:'';
+    return`<th class="${cls}" onclick="setClientSort('${field}')">${label} ${tipHtml}</th>`;
+  };
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:18px;font-weight:700">Clientes</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">Cadastro completo com alertas, Drive e contatos</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div style="position:relative">
+          <input type="text" id="clientSearchInput" class="form-input"
+            placeholder="Buscar cliente, cidade, CNPJ..."
+            style="width:220px;padding-left:28px"
+            value="${q}" oninput="_clientSearch=this.value;renderClients()">
+          <svg style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <button class="btn btn-primary" onclick="openModalClient()">+ Novo cliente</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" style="margin-bottom:14px">
+      <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-lbl">Clientes cadastrados</div></div>
+      <div class="stat-card"><div class="stat-val">${db.machines.length}</div><div class="stat-lbl">Total de máquinas</div></div>
+      <div class="stat-card" title="Clientes com link do Drive configurado"><div class="stat-val">${comDrive}</div><div class="stat-lbl">Com pasta Drive</div></div>
+      <div class="stat-card ${unregistered.length?'':''}">
+        <div class="stat-val" style="${unregistered.length?'color:var(--orange)':''}">${unregistered.length}</div>
+        <div class="stat-lbl" style="${unregistered.length?'color:var(--orange)':''}">Sem cadastro completo</div>
+      </div>
+    </div>
+
+    <!-- Tabela de clientes -->
+    ${registered.length?`
+    <div class="table-wrap" style="margin-bottom:18px">
+      <table class="client-table">
+        <thead><tr>
+          ${sortTh('nome','Cliente','Clique para ordenar pelo nome')}
+          ${sortTh('cidade','Cidade')}
+          <th>Contato</th>
+          <th>CNPJ</th>
+          ${sortTh('maquinas','Máquinas','Número de equipamentos vinculados ao nome deste cliente')}
+          ${sortTh('alerta','Alerta','Dias de antecedência para alertar sobre preventiva vencendo')}
+          <th>Drive
+            <i class="tooltip-icon" data-tip="Pasta do Google Drive com fotos e documentos do cliente">?</i>
+          </th>
+          <th></th>
+        </tr></thead>
+        <tbody>${registered.map(c=>{
+          const eqs=machinesByClient[(c.nome||'').toLowerCase().trim()]||[];
+          const nVenc=eqs.filter(eq=>{const ws=getMachineWorstStatus(eq);return ws?.level==='vencido';}).length;
+          const nAlert=eqs.filter(eq=>{const ws=getMachineWorstStatus(eq);return ws?.level==='alerta';}).length;
+          let statusDot='';
+          if(nVenc>0) statusDot=`<span class="client-status-dot" style="background:var(--red)" title="${nVenc} máquina(s) com preventiva vencida"></span>`;
+          else if(nAlert>0) statusDot=`<span class="client-status-dot" style="background:var(--orange)" title="${nAlert} máquina(s) em atenção"></span>`;
+          else if(eqs.length>0) statusDot=`<span class="client-status-dot" style="background:var(--green)" title="Todas as máquinas em dia"></span>`;
+          return`<tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:6px">
+                ${statusDot}
+                <div>
+                  <div style="font-weight:700;font-size:12px">${c.nome}</div>
+                  ${c.observacoes?`<div style="font-size:10px;color:var(--text3);font-style:italic;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${c.observacoes}">${c.observacoes}</div>`:''}
+                </div>
+              </div>
+            </td>
+            <td style="font-size:11px;color:var(--text2)">${c.cidade||'—'}</td>
+            <td style="font-size:11px">
+              ${c.telefone?`<div>📞 ${c.telefone}</div>`:''}
+              ${c.email?`<div><a href="mailto:${c.email}" style="color:var(--blue-mid)">✉ ${c.email}</a></div>`:''}
+              ${!c.telefone&&!c.email?'<span style="color:var(--text3)">—</span>':''}
+            </td>
+            <td><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3)">${c.cnpj||'—'}</span></td>
+            <td style="text-align:center">
+              ${eqs.length?`<span style="font-weight:700;color:var(--blue-mid)">${eqs.length}</span>
+                <button class="btn btn-secondary btn-xs" style="margin-left:5px" onclick="_machFilter='${c.nome.replace(/'/g,"\\'")}';showView('machines')" title="Ver máquinas deste cliente">Ver →</button>`
+                :'<span style="color:var(--text3)">—</span>'}
+            </td>
+            <td style="text-align:center">
+              ${c.antecedencia_alerta_dias?`<span class="client-alerta-badge">🔔 ${c.antecedencia_alerta_dias}d</span>`:'<span style="color:var(--text3)">—</span>'}
+            </td>
+            <td>
+              ${c.drive_url?`<a href="${c.drive_url}" target="_blank" class="btn btn-secondary btn-xs">📁 Abrir</a>`:'<span style="color:var(--text3)">—</span>'}
+            </td>
+            <td>
+              <div class="row-actions">
+                <button class="btn-icon" onclick="openModalClient('${c.id}')" title="Editar cliente">✏️</button>
+                <button class="btn-icon" onclick="deleteClient('${c.id}')" title="Excluir cliente">🗑️</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>`:`
+    <div class="empty"><div class="empty-icon">🏢</div>
+      <div class="empty-title">${q?'Nenhum cliente encontrado':'Nenhum cliente cadastrado'}</div>
+      <div class="empty-sub">${q?'Tente outro termo de busca.':'Clique em "+ Novo cliente" para começar. Os clientes aparecem automaticamente ao cadastrar máquinas.'}</div>
+    </div>`}
+
+    <!-- Clientes sem cadastro completo -->
+    ${unregistered.length?`
+    <div style="margin-top:4px">
+      <div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+        ⚠ Clientes nas máquinas sem cadastro completo
+        <i class="tooltip-icon" data-tip="Estes nomes aparecem em máquinas cadastradas mas não têm ficha de cliente própria. Clique em 'Cadastrar' para criar o cadastro completo com contato, Drive e alertas.">?</i>
+      </div>
+      <div class="table-wrap"><table class="client-table">
+        <thead><tr><th>Nome nas máquinas</th><th>Máquinas vinculadas</th><th></th></tr></thead>
+        <tbody>${unregistered.sort((a,b)=>a.nome.localeCompare(b.nome)).map(u=>`<tr>
+          <td><div style="font-weight:600">${u.nome}</div></td>
+          <td style="font-size:11px;color:var(--text2)">${u.eqs.map(e=>e.tag||e.model).join(', ')}</td>
+          <td><button class="btn btn-secondary btn-xs" onclick="openModalClientPrefill('${u.nome.replace(/'/g,"\\'")}')">Cadastrar →</button></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`:''}
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG VIEW
+// ═══════════════════════════════════════════════════════════
+function renderConfigStats(){
+  const el=document.getElementById('viewConfig');
+  const nParts=db.models.reduce((a,m)=>{
+    return a+(m.directParts||[]).length+(m.subsystems||[]).reduce((b,s)=>b+s.parts.length,0)
+  },0);
+  el.innerHTML=`
+    <div style="font-size:18px;font-weight:700;margin-bottom:4px">Configuração</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Google Sheets · Backup · Sistema</div>
+
+    <div class="gs-panel">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">Google Sheets — Banco Central</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Conecte à planilha para sincronizar dados entre todos os arquivos HTML.</div>
+      <div class="info-box"><strong>Configuração única</strong>Crie a planilha Proper_PGP_DB no Google Sheets, cole o script LEIA-ME_GAS_SCRIPT.js em Apps Script, implante como web app (Qualquer pessoa) e cole a URL abaixo.</div>
+      <div class="gs-url-row" style="margin-bottom:8px">
+        <input class="gs-url-input" type="text" id="gsUrlInput" placeholder="https://script.google.com/macros/s/...">
+        <button class="btn btn-primary" onclick="connectGS()">Conectar</button>
+        <button class="btn btn-secondary" onclick="testGS()">Testar</button>
+      </div>
+      <div id="gsTestResult" style="font-size:11px;color:var(--text2);min-height:16px"></div>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom:12px">
+      <div class="stat-card"><div class="stat-val">${db.models.length}</div><div class="stat-lbl">Modelos no catálogo</div></div>
+      <div class="stat-card"><div class="stat-val">${nParts}</div><div class="stat-lbl">Peças cadastradas</div></div>
+      <div class="stat-card"><div class="stat-val">${db.machines.length}</div><div class="stat-lbl">Máquinas PGP</div></div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">↓ Sincronizar do campo (Sheets)</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">
+        Puxa as visitas registradas pelo checklist de campo e atualiza horímetros e peças das máquinas localmente.
+        Use quando o técnico enviou dados de outro dispositivo.
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" onclick="syncFromGS()">↓ Sincronizar agora</button>
+        <span id="syncStatus" style="font-size:11px;color:var(--text2)"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">Exportar / Importar dados</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Backup completo em JSON — catálogo + máquinas PGP.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-secondary" onclick="exportJSON()">↓ Exportar JSON</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">↑ Importar JSON</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">Sobre o sistema</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8">
+        <strong>Catálogo Administrativo v3.2</strong> — Proper Compressores<br>
+        Catálogo de modelos · Peças com similares · Fotos · Subsistemas nomeados · Máquinas PGP com dados completos de cliente<br>
+        Detecção de duplicados em modelos e máquinas · Google Sheets como backend
+      </div>
+    </div>
+  `;
+  if(gsUrl) document.getElementById('gsUrlInput').value=gsUrl;
+}
+
+// ═══════════════════════════════════════════════════════════
+// SINCRONIZAR DO SHEETS → LOCAL
+// ═══════════════════════════════════════════════════════════
+async function syncFromGS(){
+  if(!gsUrl||!gsConnected){
+    toast('Configure e conecte o Google Sheets primeiro','error'); return;
+  }
+
+  const el = document.getElementById('syncStatus');
+  const syncBtn = document.getElementById('btnSyncHeader');
+
+  const setMsg = (txt, color) => {
+    if(el) el.innerHTML = `<span style="color:${color}">${txt}</span>`;
+  };
+
+  if(syncBtn){ syncBtn.textContent='⏳...'; syncBtn.disabled=true; }
+  setMsg('⏳ Sincronizando...','var(--blue-mid)');
+  toast('Sincronizando...','');
+
+  try{
+    const rm = await fetch(gsUrl+'?action=getMachines');
+    const dm = await rm.json();
+    if(dm.status!=='ok') throw new Error('Erro ao buscar máquinas: '+(dm.error||''));
+    const sheetMachines = dm.machines||[];
+
+    const rp = await fetch(gsUrl+'?action=getAllMachineParts');
+    const dp = await rp.json();
+    const allMachineParts = dp.status==='ok' ? dp.parts||[] : [];
+
+    const rv = await fetch(gsUrl+'?action=getVisits');
+    const dv = await rv.json();
+    const visits = dv.status==='ok' ? dv.visits||[] : [];
+
+    let updMachines=0, newMachines=0, updParts=0, visitReconciled=0;
+
+    sheetMachines.forEach(sm=>{
+      const gsId     = String(sm['ID']||'').trim();
+      const gsSerial = String(sm['Série']||'');
+      const gsTag    = String(sm['TAG']||'');
+      let eq = findMachineByRefs(gsId, gsSerial, gsTag);
+      const newHour = parseInt(sm['Hor.Total'])||0;
+
+      if(eq){
+        const prevHour = parseInt(eq.hourTotal)||0;
+        if(newHour > prevHour){ eq.hourTotal=newHour; updMachines++; }
+        if(sm['h/Semana']) eq.hpw = parseInt(sm['h/Semana'])||eq.hpw;
+        eq.client   = sm['Cliente']     || eq.client   || '';
+        eq.branch   = sm['Filial']      || eq.branch   || '';
+        eq.brand    = sm['Marca']       || eq.brand    || '';
+        eq.model    = sm['Modelo']      || eq.model    || '';
+        eq.serial   = gsSerial          || eq.serial   || '';
+        eq.tag      = gsTag             || eq.tag      || '';
+        eq.year     = sm['Ano']         || eq.year     || '';
+        eq.location = sm['Localização'] || eq.location || '';
+        eq.obs      = sm['Observações'] || eq.obs      || '';
+      } else if(sm['Cliente']||sm['Marca']||gsSerial||gsTag){
+        db.machines.push({
+          id:        gsId||('EQ-'+Date.now()+'-'+Math.random().toString(36).slice(2,5)),
+          client:    sm['Cliente']    ||'',
+          branch:    sm['Filial']     ||'',
+          brand:     sm['Marca']      ||'',
+          model:     sm['Modelo']     ||'',
+          serial:    gsSerial,
+          tag:       gsTag,
+          year:      sm['Ano']        ||'',
+          location:  sm['Localização']||'',
+          hourTotal: newHour,
+          hpw:       parseInt(sm['h/Semana'])||0,
+          obs:       sm['Observações']||'',
+          driveLink:'', photos:[], parts:{},
+          cnpj:'', contact:'', phone:'', email:'', city:'',
+        });
+        newMachines++;
+      }
+    });
+
+    allMachineParts.forEach(mp=>{
+      const mid = String(mp['Machine_ID']||'').trim();
+      const pid = String(mp['Part_ID']||'');
+      if(!pid) return;
+      const eq = findMachineByRefs(mid, mp['Serial']||'', mp['TAG']||'');
+      if(!eq) return;
+      if(!eq.parts) eq.parts={};
+      eq.parts[pid]={
+        name:       mp['Part_Name']||pid,
+        lastChange: parseInt(mp['Last_Change_H'])||0,
+        interval:   parseInt(mp['Interval_H'])||2000,
+        ref:        mp['Ref'] || eq.parts[pid]?.ref || '',
+        na:         String(mp['NA']||'').toUpperCase()==='SIM',
+      };
+      updParts++;
+    });
+
+    visits
+      .slice()
+      .sort((a,b)=>{
+        const da = parseFlexibleDate(a.visitDate || a['Data'] || a['Visit_Date']) || new Date(0);
+        const dbb = parseFlexibleDate(b.visitDate || b['Data'] || b['Visit_Date']) || new Date(0);
+        return da - dbb;
+      })
+      .forEach(v=>{
+        const eq = findMachineByRefs(v.machine_id || v['Machine_ID'], v.serial || v['Série'] || v['Serial'], v.tag || v['TAG']);
+        if(!eq) return;
+        let touched = false;
+        const visitHour = parseInt(v.hourTotal || v['Hor.Total']) || 0;
+        if(visitHour > (parseInt(eq.hourTotal)||0)){ eq.hourTotal = visitHour; touched = true; }
+        const visitHpw = parseInt(v.hpw || v['h/Semana']) || 0;
+        if(visitHpw){ eq.hpw = visitHpw; touched = true; }
+        const visitObs = v.generalObs || v['Observações'] || '';
+        if(visitObs){ eq.obs = visitObs; touched = true; }
+        const visitDate = dateOnlyISO(v.visitDate || v['Data'] || v['Visit_Date']);
+        if(visitDate){ eq.lastVisit = visitDate; touched = true; }
+        const visitParts = v.parts && typeof v.parts === 'object' ? v.parts : null;
+        if(visitParts){
+          if(!eq.parts) eq.parts = {};
+          Object.entries(visitParts).forEach(([pid, ps])=>{
+            const ex = eq.parts[pid] || {};
+            eq.parts[pid] = {
+              name: ps.name || ex.name || pid,
+              lastChange: ps.lastChange!==undefined ? parseInt(ps.lastChange)||0 : (ex.lastChange||0),
+              interval: ps.interval ? parseInt(ps.interval)||2000 : (ex.interval||2000),
+              ref: ps.ref || ex.ref || '',
+              na: ps.na!==undefined ? !!ps.na : !!ex.na,
+            };
+            updParts++;
+          });
+          touched = true;
+        }
+        if(touched) visitReconciled++;
+      });
+
+    save();
+
+    if(currentView==='dashboard')        renderDashboard();
+    else if(currentView==='machines')    renderMachines();
+    else if(currentView==='preventivas') renderPreventivas();
+    else if(currentView==='clients')     renderClients();
+
+    const parts_txt = updParts>0 ? `, ${updParts} peça${updParts!==1?'s':''}` : '';
+    const new_txt   = newMachines>0 ? `, ${newMachines} máquina${newMachines!==1?'s':''} nova${newMachines!==1?'s':''}` : '';
+    const visit_txt = visitReconciled>0 ? `, ${visitReconciled} visita${visitReconciled!==1?'s':''} conciliada${visitReconciled!==1?'s':''}` : '';
+    const upd_txt   = updMachines>0 ? `${updMachines} horímetro${updMachines!==1?'s':''} atualizado${updMachines!==1?'s':''}` : 'Nenhuma alteração';
+    const msg = `✓ ${upd_txt}${parts_txt}${new_txt}${visit_txt} · ${visits.length} visita${visits.length!==1?'s':''}`;
+
+    setMsg(msg,'var(--green)');
+    toast(msg,'success');
+    if(syncBtn){ syncBtn.textContent='↓ Sincronizar'; syncBtn.disabled=false; }
+
+  }catch(e){
+    setMsg('❌ '+e.message,'var(--red)');
+    toast('Erro: '+e.message,'error');
+    console.error('syncFromGS:', e);
+    if(syncBtn){ syncBtn.textContent='↓ Sincronizar'; syncBtn.disabled=false; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='proper_catalogo_v2_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); toast('JSON exportado','success');
+}
+function importJSON(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.models)throw new Error('Formato inválido');
+      if(!confirm('Substituir todos os dados atuais pelos dados importados?'))return;
+      db=data; save(); renderSidebar(); renderCatalog();
+      toast('Dados importados com sucesso','success');
+    }catch(err){toast('Erro ao importar: '+err.message,'error')}
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+if(gsUrl) testGS();
+renderSidebar();
+showView('dashboard');
+
+// ── SINCRONIZAÇÃO AUTOMÁTICA ENTRE ABAS ──────────────────
+// Quando o campo (em outra aba) atualiza o localStorage,
+// o admin detecta e recarrega os dados automaticamente.
+window.addEventListener('storage', function(e){
+  if(e.key !== 'proper_admin_v2') return;
+  if(!e.newValue) return;
+  try{
+    const newDb = JSON.parse(e.newValue);
+    if(!newDb || !newDb.machines) return;
+    db = newDb;
+    // Atualizar a view atual sem piscar
+    if(currentView==='dashboard')   renderDashboard();
+    else if(currentView==='machines')    renderMachines();
+    else if(currentView==='preventivas') renderPreventivas();
+    else if(currentView==='clients')     renderClients();
+    renderSidebar(document.getElementById('sidebarSearch')?.value||'');
+    // Toast discreto para avisar o usuário
+    toast('↓ Dados atualizados pelo campo','info');
+  }catch(err){ console.warn('storage sync:', err); }
+});
+</script>
+</body>
+</html>
