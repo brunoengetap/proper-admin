@@ -1631,7 +1631,7 @@ function saveClient(){
   if(!nome){toast('Informe o nome do cliente','error');return;}
   if(!db.clients) db.clients=[];
   const data={
-    id: editClientId||('CLI-'+uid()),
+    id: editClientId ? editClientId : ('CLI-'+uid()),
     nome,
     cnpj:       document.getElementById('clCnpj').value.trim(),
     cidade:     document.getElementById('clCidade').value.trim(),
@@ -1644,13 +1644,20 @@ function saveClient(){
   };
   if(editClientId){
     const idx=db.clients.findIndex(c=>c.id===editClientId);
-    if(idx>=0) db.clients[idx]=data;
-    toast('Cliente atualizado','success');
+    if(idx>=0){
+      db.clients[idx]=data;
+      toast('Cliente atualizado','success');
+    } else {
+      db.clients.push(data);
+      console.warn('saveClient: editClientId não encontrado, criou novo:', data.id);
+      toast('Cliente cadastrado','success');
+    }
   } else {
     db.clients.push(data);
     toast('Cliente cadastrado','success');
   }
   editClientId=null;
+  _captureFormSnapshot('modalClient');
   save(); closeModal('modalClient'); renderClients();
   syncToGS('saveClient',{client:data});
 }
@@ -2378,6 +2385,7 @@ function saveModel(){
     toast('Modelo criado','success');
     syncToGS('saveModel',{model:nm});
   }
+  _captureFormSnapshot('modalModel');
   save(); closeModal('modalModel'); renderSidebar(); renderCatalog();
 }
 
@@ -2426,6 +2434,7 @@ function saveSub(){
     m.subsystems.push({id:uid(),...data,parts:[]});
     toast('Subsistema criado','success');
   }
+  _captureFormSnapshot('modalSub');
   save(); closeModal('modalSub'); renderCatalog(); switchTab('subs');
 }
 
@@ -2510,6 +2519,7 @@ function savePart(){
     if(type==='direct'){const p=m.directParts.find(p=>p.id===partId);Object.assign(p,data)}
     else{const s=m.subsystems.find(s=>s.id===subId);const p=s.parts.find(p=>p.id===partId);Object.assign(p,data)}
     const wasSubTab=editPartTarget.type==='sub';
+    _captureFormSnapshot('modalPart');
     save(); closeModal('modalPart'); renderCatalog(); if(wasSubTab)switchTab('subs');
     toast('Peça atualizada','success');
   } else {
@@ -2517,6 +2527,7 @@ function savePart(){
     const m=getModel(modelId); data.id=uid();
     if(type==='direct') m.directParts.push(data);
     else{const s=m.subsystems.find(s=>s.id===subId);s.parts.push(data)}
+    _captureFormSnapshot('modalPart');
     save(); closeModal('modalPart'); renderCatalog(); if(type==='sub')switchTab('subs');
     toast('Peça adicionada','success');
   }
@@ -2666,6 +2677,7 @@ function saveMachine(){
     db.machines.push(data);
     toast('Máquina cadastrada','success');
   }
+  _captureFormSnapshot('modalMachine');
   save(); closeModal('modalMachine'); renderMachines(); renderSidebar();
   syncToGS('saveMachine',{machine:data});
 }
