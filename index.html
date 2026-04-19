@@ -880,21 +880,22 @@ tr:hover td{background:var(--gray-50)}
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// ETAPA 0 — VERSIONAMENTO E SNAPSHOTS
+// ETAPA 0 — VERSIONAMENTO, SNAPSHOTS E MIGRAÇÕES
 // ═══════════════════════════════════════════════════════════
 const DB_KEY = 'proper_admin_v2';
 const SNAPSHOT_PREFIX = 'proper_admin_snapshot_';
-const CURRENT_SCHEMA_VERSION = 1; // incrementar a cada migração estrutural
 
-// Garante que schemaVersion existe sem alterar dados
-// Ausência = versão 1 (retrocompatível, sem erro)
+// Incrementar este número a cada nova migração estrutural adicionada em runMigrations()
+// Versão atual: 1 (nenhuma migração estrutural ainda — Etapa 5 será a primeira)
+const CURRENT_SCHEMA_VERSION = 1;
+
+// ── Garante que schemaVersion existe — retrocompatível, ausência = versão 1 ──
 function ensureSchemaVersion(dbObj) {
   if (!dbObj || typeof dbObj !== 'object') return;
   if (!dbObj.schemaVersion) dbObj.schemaVersion = 1;
 }
 
-// Cria cópia de segurança antes de qualquer migração estrutural
-// Salva em chave separada — nunca toca proper_admin_v2
+// ── Snapshot: salva cópia em chave separada, nunca toca proper_admin_v2 ──
 function snapshotPreMigration(label) {
   try {
     const raw = localStorage.getItem(DB_KEY);
@@ -912,28 +913,7 @@ function snapshotPreMigration(label) {
   }
 }
 
-// Restaura a partir de um snapshot — exige confirmação
-function restoreFromSnapshot(label) {
-  const raw = localStorage.getItem(SNAPSHOT_PREFIX + label);
-  if (!raw) { alert('Snapshot não encontrado: ' + label); return false; }
-  const payload = JSON.parse(raw);
-  const ts = payload.timestamp ? new Date(payload.timestamp).toLocaleString('pt-BR') : '?';
-  if (!confirm('Restaurar snapshot "' + label + '" criado em ' + ts + '?\n\nIsso substituirá todos os dados atuais.')) return false;
-  try {
-    localStorage.setItem(DB_KEY, JSON.stringify(payload.data || {}));
-    db = JSON.parse(localStorage.getItem(DB_KEY));
-    // Re-renderizar view atual
-    if (typeof showView === 'function') showView(currentView || 'dashboard');
-    if (typeof renderSidebar === 'function') renderSidebar();
-    toast('Dados restaurados do snapshot "' + label + '"', 'success');
-    return true;
-  } catch (err) {
-    toast('Erro ao restaurar: ' + err.message, 'error');
-    return false;
-  }
-}
-
-// Lista snapshots disponíveis no localStorage
+// ── Lista todos os snapshots disponíveis no localStorage ──
 function listSnapshots() {
   const result = [];
   for (let i = 0; i < localStorage.length; i++) {
@@ -947,6 +927,85 @@ function listSnapshots() {
   }
   return result.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 }
+
+// ── Restaura a partir de snapshot — exige confirmação, limpa estado residual ──
+function restoreFromSnapshot(label) {
+  const raw = localStorage.getItem(SNAPSHOT_PREFIX + label);
+  if (!raw) { alert('Snapshot não encontrado: ' + label); return false; }
+  let payload;
+  try { payload = JSON.parse(raw); } catch(e) { alert('Snapshot corrompido.'); return false; }
+  const ts = payload.timestamp ? new Date(payload.timestamp).toLocaleString('pt-BR') : '?';
+  if (!confirm('Restaurar snapshot "' + label + '" criado em ' + ts + '?\n\nIsso substituirá todos os dados atuais.')) return false;
+  try {
+    localStorage.setItem(DB_KEY, JSON.stringify(payload.data || {}));
+    db = JSON.parse(localStorage.getItem(DB_KEY));
+    ensureSchemaVersion(db);
+    _resetModalState();           // Etapa 1: limpa snapshots de modal residuais
+    _safeRerender();              // re-renderiza view atual de forma segura
+    toast('Dados restaurados do snapshot "' + label + '"', 'success');
+    // Atualizar UI da lista de snapshots se Config estiver aberta
+    if (currentView === 'config') renderConfigStats();
+    return true;
+  } catch (err) {
+    toast('Erro ao restaurar: ' + err.message, 'error');
+    return false;
+  }
+}
+
+// ── Apaga um snapshot do localStorage ──
+function deleteSnapshot(label) {
+  if (!confirm('Apagar snapshot "' + label + '"? Esta ação não pode ser desfeita.')) return;
+  localStorage.removeItem(SNAPSHOT_PREFIX + label);
+  if (currentView === 'config') renderConfigStats();
+  toast('Snapshot apagado.');
+}
+
+// ── Re-renderiza a view atual de forma segura (usado após restore/import) ──
+function _safeRerender() {
+  try {
+    renderSidebar(document.getElementById('sidebarSearch')?.value || '');
+    if      (currentView === 'dashboard')   renderDashboard();
+    else if (currentView === 'preventivas') renderPreventivas();
+    else if (currentView === 'catalog')     renderCatalog();
+    else if (currentView === 'machines')    renderMachines();
+    else if (currentView === 'clients')     renderClients();
+    else if (currentView === 'config')      renderConfigStats();
+  } catch(e) { console.warn('[Proper] _safeRerender:', e); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// MIGRAÇÕES IDEMPOTENTES — runMigrations()
+//
+// Regras:
+//  - Cada migração verifica db.schemaVersion antes de rodar
+//  - Snapshot é criado automaticamente antes da primeira migração necessária
+//  - Não roda duas vezes (idempotente por schemaVersion)
+//  - Não duplica dados
+//  - Adicionar novas migrações aqui e incrementar CURRENT_SCHEMA_VERSION
+// ─────────────────────────────────────────────────────────────────────────
+function runMigrations() {
+  ensureSchemaVersion(db);
+  if (db.schemaVersion >= CURRENT_SCHEMA_VERSION) return; // nada a fazer
+
+  let snapshotTaken = false;
+
+  // ── Migração para versão 2: converter supplier (string) → suppliers (array) ──
+  // DESATIVADA ATÉ ETAPA 5 — placeholder para referência
+  // if (db.schemaVersion < 2) {
+  //   if (!snapshotTaken) { snapshotPreMigration('pre_v2'); snapshotTaken = true; }
+  //   _migrateSuppliersToArray();
+  //   db.schemaVersion = 2;
+  // }
+
+  // Se alguma migração rodou, salvar
+  if (snapshotTaken) {
+    save();
+    console.log('[Proper] Migrações concluídas. Schema agora na versão', db.schemaVersion);
+  }
+}
+
+// Placeholder — será implementada na Etapa 5
+// function _migrateSuppliersToArray() { ... }
 
 // ─── Hash estável para comparação de db antes/depois de sync ─────────────
 function _stableStringify(v) {
@@ -1015,6 +1074,18 @@ function closeModalSafe(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) modal.classList.remove('open');
   delete _modalSnapshots[modalId];
+}
+
+// Limpa TODO o estado residual de modais — chamado em restore e importJSON
+function _resetModalState() {
+  // Fechar todos os modais que estejam abertos
+  ['modalModel','modalSub','modalPart','modalMachine','modalMachineParts','modalClient']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('open');
+    });
+  // Limpar todos os snapshots de formulário
+  Object.keys(_modalSnapshots).forEach(k => delete _modalSnapshots[k]);
 }
 
 // Sobrescreve closeModal para redirecionar tudo pelo fluxo seguro
@@ -1259,6 +1330,8 @@ let db = JSON.parse(localStorage.getItem('proper_admin_v2') || 'null') || {
 
 // Etapa 0: garantir schemaVersion sem alterar dados (retrocompatível)
 ensureSchemaVersion(db);
+// Etapa 0: rodar migrações pendentes (idempotente — só executa se necessário)
+runMigrations();
 
 // Pre-load clients from PGP data
 const PGP_CLIENTS = ["ENGETAP ENGENHARIA LTDA","LOCALIZA RENT A CAR SA","DAMMAPAC","STATUS IND. E COM. LTDA","SICREDI","SICOOB","RAIZEN","METALURGICA FERCAR LTDA","PRALUM DISTRIBUIDORA","MINERITA LOGISTICA","MOLDIMIG MACHARIA LTDA","PEMILL","NEO ESSENCI DESIGN","PH INTRALOGISTICA","METALURGICA AMAPA","METALURGICA METALMIG","METALFORMA","SORRAG DO BRASIL","TECHTO BRASIL","SILOE MANUTENCAO INDUSTRIAL","SAFOL","METALSIDER","METAMIL","FUNDIÇÃO CLAUDIENSE","BOMP","MARPE SERVICOS","METALLURGICA JANO","SICOOB CONFEDERACAO","MONADE MOVEIS","OFFICER INDUSTRIA QUIMICA","METALURGICA DRAGAO","PEDREIRA IRMAOS MACHADO","ARAMIG","METASAL","SENAI CETEF","MARANGONI - BECAPI","META X","ALUMINAS","BONOBO","UNIFENAS","USIMINAS","SIDERURGICA ATLAS","SUZANO","STELLANTIS"];
@@ -3165,6 +3238,28 @@ function renderClients(){
 // ═══════════════════════════════════════════════════════════
 // CONFIG VIEW
 // ═══════════════════════════════════════════════════════════
+// Gera HTML da lista de snapshots para exibição na aba Config
+function _renderSnapshotsList() {
+  const snaps = listSnapshots();
+  if (!snaps.length) {
+    return '<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum snapshot disponível. Snapshots são criados automaticamente antes de importações e migrações.</div>';
+  }
+  return snaps.map(s => {
+    const ts = s.timestamp ? new Date(s.timestamp).toLocaleString('pt-BR') : '?';
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100);gap:10px">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text)">${s.label}</div>
+        <div style="font-size:10px;color:var(--text3)">${ts}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-secondary btn-sm" onclick="restoreFromSnapshot('${s.label}')">↩ Restaurar</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSnapshot('${s.label}')">×</button>
+      </div>
+    </div>`;
+  }).join('') +
+  '<div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="snapshotPreMigration(\'manual_\'+new Date().toISOString().slice(0,10));if(currentView===\'config\')renderConfigStats();toast(\'Snapshot criado\',\'success\')">+ Criar snapshot agora</button></div>';
+}
+
 function renderConfigStats(){
   const el=document.getElementById('viewConfig');
   const nParts=db.models.reduce((a,m)=>{
@@ -3213,10 +3308,19 @@ function renderConfigStats(){
       </div>
     </div>
 
+    <div class="card" id="snapshotsCard">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">🗂 Snapshots de segurança</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+        Cópias automáticas criadas antes de importações e migrações de dados.
+        Use para reverter se algo der errado.
+      </div>
+      <div id="snapshotsList">${_renderSnapshotsList()}</div>
+    </div>
+
     <div class="card">
       <div style="font-size:13px;font-weight:600;margin-bottom:4px">Sobre o sistema</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.8">
-        <strong>Catálogo Administrativo v3.2</strong> — Proper Compressores<br>
+        <strong>Catálogo Administrativo v3.3</strong> — Proper Compressores<br>
         Catálogo de modelos · Peças com similares · Fotos · Subsistemas nomeados · Máquinas PGP com dados completos de cliente<br>
         Detecção de duplicados em modelos e máquinas · Google Sheets como backend
       </div>
@@ -3438,9 +3542,20 @@ function importJSON(input){
   reader.onload=e=>{
     try{
       const data=JSON.parse(e.target.result);
-      if(!data.models)throw new Error('Formato inválido');
-      if(!confirm('Substituir todos os dados atuais pelos dados importados?'))return;
-      db=data; save(); renderSidebar(); renderCatalog();
+      if(!data.models)throw new Error('Formato inválido — arquivo não contém modelos.');
+      if(!confirm('Substituir todos os dados atuais pelos dados importados?\n\nUm snapshot automático será criado antes da substituição.'))return;
+      // Etapa 0: snapshot da base atual antes de sobrescrever
+      snapshotPreMigration('pre_import_' + new Date().toISOString().slice(0,10));
+      // Etapa 0: normalizar schema do arquivo importado
+      ensureSchemaVersion(data);
+      db = data;
+      save();
+      // Etapa 0: rodar migrações caso o arquivo importado seja de versão anterior
+      runMigrations();
+      // Etapa 1: fechar modais e limpar estado residual
+      _resetModalState();
+      // Re-renderizar de forma segura
+      _safeRerender();
       toast('Dados importados com sucesso','success');
     }catch(err){toast('Erro ao importar: '+err.message,'error')}
   };
