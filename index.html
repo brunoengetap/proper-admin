@@ -357,6 +357,50 @@ tr:hover td{background:var(--gray-50)}
 .stat-card.active-filter{border-color:var(--blue-mid);background:var(--blue-pale)}
 .stat-card.active-filter .stat-val{color:var(--blue)}
 
+.stat-card{position:relative}
+
+.card-tooltip{
+  display:none;
+  position:absolute;
+  bottom:calc(100% + 6px);
+  left:50%;
+  transform:translateX(-50%);
+  background:#1a1e2e;
+  color:white;
+  font-size:11px;
+  line-height:1.4;
+  padding:6px 10px;
+  border-radius:6px;
+  white-space:normal;
+  text-align:center;
+  z-index:100;
+  pointer-events:none;
+  max-width:220px;
+  box-shadow:0 4px 12px rgba(0,0,0,.2);
+}
+
+.stat-card:hover .card-tooltip,
+.dash-card:hover .card-tooltip{
+  display:block;
+}
+
+.stat-card.no-action{cursor:default;pointer-events:none}
+.stat-card.no-action:hover{box-shadow:none;border-color:var(--border);transform:none}
+
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.chip-overflow-btn{
+  background:var(--gray-200);
+  border:none;
+  border-radius:20px;
+  padding:4px 12px;
+  font-size:11px;
+  font-weight:600;
+  color:var(--text2);
+  cursor:pointer;
+  font-family:inherit;
+}
+.chip-overflow-btn:hover{background:var(--gray-300);}
+
 /* ── SIDEBAR OCULTA em views não-catálogo ── */
 .sidebar-hidden{display:none!important}
 
@@ -1806,8 +1850,9 @@ function renderDashboard(){
       </div>
       <div class="dash-card warning" onclick="showView('preventivas');setPrevFilter('alerta')" title="Ver máquinas em atenção">
         <div class="dash-card-val">${nAlertas}</div>
-        <div class="dash-card-lbl">Em atenção</div>
+        <div class="dash-card-lbl">Próximas da manutenção</div>
         <div class="dash-card-sub">Dentro de 10% do intervalo</div>
+        <div class="card-tooltip">Equipamentos com peças se aproximando do limite de horas definido</div>
         <div class="dash-card-arrow">→</div>
       </div>
       <div class="dash-card ok" onclick="showView('preventivas');setPrevFilter('ok')" title="Ver máquinas OK">
@@ -1824,14 +1869,16 @@ function renderDashboard(){
       </div>
       <div class="dash-card" onclick="showView('catalog')" title="Ver catálogo">
         <div class="dash-card-val">${db.models.length}</div>
-        <div class="dash-card-lbl">Modelos no catálogo</div>
+        <div class="dash-card-lbl">Modelos identificados</div>
         <div class="dash-card-sub">${withModel} máquinas vinculadas</div>
+        <div class="card-tooltip">Modelos com ficha técnica e peças cadastradas no catálogo</div>
         <div class="dash-card-arrow">→</div>
       </div>
       <div class="dash-card" onclick="showView('machines')" style="opacity:${nSemDados?1:.5}">
         <div class="dash-card-val" style="color:var(--text3)">${nSemDados}</div>
-        <div class="dash-card-lbl">Sem dados de peças</div>
+        <div class="dash-card-lbl">Sem plano de manutenção</div>
         <div class="dash-card-sub">Requerem lançamento</div>
+        <div class="card-tooltip">Máquinas sem nenhuma peça ou intervalo de preventiva cadastrado</div>
         <div class="dash-card-arrow">→</div>
       </div>
     </div>
@@ -3121,19 +3168,21 @@ function renderMachines(){
 
     <!-- Stats clicáveis -->
     <div class="stats-grid" style="margin-bottom:14px">
-      <div class="stat-card ${_machFilter===''&&!search?'':''}">
+      <div class="stat-card no-action ${_machFilter===''&&!search?'':''}">
         <div class="stat-val">${total}</div>
         <div class="stat-lbl">Total de equipamentos</div>
       </div>
       <div class="stat-card" style="cursor:pointer" onclick="showView('preventivas');setPrevFilter('vencido')">
         <div class="stat-val" style="color:var(--red)">${withAlert}</div>
-        <div class="stat-lbl">Com alertas ou vencidas →</div>
+        <div class="stat-lbl">Máquinas com alerta →</div>
+        <div class="card-tooltip">Equipamentos com manutenção vencida ou próxima do limite</div>
       </div>
       <div class="stat-card" style="cursor:pointer" onclick="showView('catalog')">
         <div class="stat-val" style="color:var(--blue-mid)">${withModel}</div>
-        <div class="stat-lbl">Com modelo no catálogo →</div>
+        <div class="stat-lbl">Com modelo identificado →</div>
+        <div class="card-tooltip">Máquinas vinculadas a um modelo com ficha técnica no catálogo</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card no-action">
         <div class="stat-val">${nClients}</div>
         <div class="stat-lbl">Clientes ativos</div>
       </div>
@@ -3287,12 +3336,14 @@ function renderClients(){
 
     <!-- Stats -->
     <div class="stats-grid" style="margin-bottom:14px">
-      <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-lbl">Clientes cadastrados</div></div>
-      <div class="stat-card"><div class="stat-val">${db.machines.length}</div><div class="stat-lbl">Total de máquinas</div></div>
-      <div class="stat-card" title="Clientes com link do Drive configurado"><div class="stat-val">${comDrive}</div><div class="stat-lbl">Com pasta Drive</div></div>
+      <div class="stat-card no-action"><div class="stat-val">${total}</div><div class="stat-lbl">Clientes cadastrados</div></div>
+      <div class="stat-card no-action"><div class="stat-val">${db.machines.length}</div><div class="stat-lbl">Total de máquinas</div></div>
+      <div class="stat-card no-action"><div class="stat-val">${comDrive}</div><div class="stat-lbl">Com pasta Drive</div></div>
       <div class="stat-card ${unregistered.length?'':''}">
         <div class="stat-val" style="${unregistered.length?'color:var(--orange)':''}">${unregistered.length}</div>
-        <div class="stat-lbl" style="${unregistered.length?'color:var(--orange)':''}">Sem cadastro completo</div>
+        <div class="stat-lbl" style="${unregistered.length?'color:var(--orange)':''}">Cadastro incompleto</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${unregistered.length} clientes</div>
+        <div class="card-tooltip">Clientes sem CNPJ, contato ou pasta Drive cadastrados</div>
       </div>
     </div>
 
