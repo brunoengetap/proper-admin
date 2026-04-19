@@ -452,6 +452,7 @@ tr:hover td{background:var(--gray-50)}
       <div class="gs-dot off" id="gsDot"></div>
       <span id="gsStatusText">Sem conexão</span>
     </div>
+    <span id="syncHeaderStatus" style="font-size:11px;color:rgba(255,255,255,.72);white-space:nowrap">Sync: pendente</span>
     <button id="btnSyncHeader" onclick="syncFromGS()" title="Sincronizar dados do campo"
       style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.8);font-size:11px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;white-space:nowrap;display:none">
       ↓ Sincronizar
@@ -1347,6 +1348,9 @@ let currentView='catalog';
 
 let gsUrl=localStorage.getItem('proper_gs_url')||'';
 let gsConnected=false;
+let _syncInProgress=false;
+let _lastSyncHash=_dbHash(db);
+let _lastSyncAt='';
 
 function normKey(v){ return String(v||'').trim().toLowerCase(); }
 
@@ -1432,6 +1436,17 @@ function setGsStatus(state){
   }
   else if(state==='connecting'){dot.className='gs-dot sync';txt.textContent='Conectando...';gsConnected=false;if(syncBtn)syncBtn.style.display='none';}
   else{dot.className='gs-dot off';txt.textContent='Sem conexão';gsConnected=false;if(syncBtn)syncBtn.style.display='none';}
+}
+
+function setSyncHeaderStatus(state, detail=''){
+  const el=document.getElementById('syncHeaderStatus');
+  if(!el) return;
+  let txt='Sync: pendente';
+  if(state==='syncing') txt='Sync: sincronizando';
+  else if(state==='synced') txt='Sync: sincronizado';
+  else if(state==='error') txt='Sync: erro';
+  if(detail) txt += ' · ' + detail;
+  el.textContent=txt;
 }
 
 async function testGS(){
@@ -3332,10 +3347,14 @@ function renderConfigStats(){
 // ═══════════════════════════════════════════════════════════
 // SINCRONIZAR DO SHEETS → LOCAL
 // ═══════════════════════════════════════════════════════════
-async function syncFromGS(){
+async function syncFromGS({ silent = false } = {}){
   if(!gsUrl||!gsConnected){
-    toast('Configure e conecte o Google Sheets primeiro','error'); return;
+    setSyncHeaderStatus('error');
+    if(!silent) toast('Configure e conecte o Google Sheets primeiro','error');
+    return;
   }
+  if(_syncInProgress) return;
+  _syncInProgress = true;
 
   const el = document.getElementById('syncStatus');
   const syncBtn = document.getElementById('btnSyncHeader');
@@ -3346,7 +3365,8 @@ async function syncFromGS(){
 
   if(syncBtn){ syncBtn.textContent='⏳...'; syncBtn.disabled=true; }
   setMsg('⏳ Sincronizando...','var(--blue-mid)');
-  toast('Sincronizando...','');
+  setSyncHeaderStatus('syncing');
+  if(!silent) toast('Sincronizando...','');
 
   async function gsGet(action){
     const r=await fetch(gsUrl+'?action='+action+'&key='+_AUTH_HASH,{method:'GET'});
@@ -3356,6 +3376,7 @@ async function syncFromGS(){
   }
 
   try{
+    const beforeHash = _dbHash(db);
     const dm = await gsGet('getMachinesWithParts');
     if(dm.status!=='ok') throw new Error('Erro ao buscar máquinas: '+(dm.error||''));
     const sheetMachines = dm.machines||[];
@@ -3501,29 +3522,44 @@ async function syncFromGS(){
         if(touched) visitReconciled++;
       });
 
-    save();
+    const afterHash = _dbHash(db);
+    const changed = afterHash !== beforeHash;
 
-    if(currentView==='dashboard')        renderDashboard();
-    else if(currentView==='machines')    renderMachines();
-    else if(currentView==='preventivas') renderPreventivas();
-    else if(currentView==='clients')     renderClients();
+    if(changed){
+      save();
+      _lastSyncHash = afterHash;
+      _lastSyncAt = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
-    const parts_txt = updParts>0 ? `, ${updParts} peça${updParts!==1?'s':''}` : '';
-    const new_txt   = newMachines>0 ? `, ${newMachines} máquina${newMachines!==1?'s':''} nova${newMachines!==1?'s':''}` : '';
-    const visit_txt = visitReconciled>0 ? `, ${visitReconciled} visita${visitReconciled!==1?'s':''} conciliada${visitReconciled!==1?'s':''}` : '';
-    const created_txt = visitCreated>0 ? `, ${visitCreated} criada${visitCreated!==1?'s':''} por visita` : '';
-    const upd_txt   = updMachines>0 ? `${updMachines} horímetro${updMachines!==1?'s':''} atualizado${updMachines!==1?'s':''}` : 'Nenhuma alteração';
-    const msg = `✓ ${upd_txt}${parts_txt}${new_txt}${visit_txt}${created_txt} · ${visits.length} visita${visits.length!==1?'s':''}`;
+      if(currentView==='dashboard')        renderDashboard();
+      else if(currentView==='machines')    renderMachines();
+      else if(currentView==='preventivas') renderPreventivas();
+      else if(currentView==='clients')     renderClients();
 
-    setMsg(msg,'var(--green)');
-    toast(msg,'success');
-    if(syncBtn){ syncBtn.textContent='↓ Sincronizar'; syncBtn.disabled=false; }
+      const parts_txt = updParts>0 ? `, ${updParts} peça${updParts!==1?'s':''}` : '';
+      const new_txt   = newMachines>0 ? `, ${newMachines} máquina${newMachines!==1?'s':''} nova${newMachines!==1?'s':''}` : '';
+      const visit_txt = visitReconciled>0 ? `, ${visitReconciled} visita${visitReconciled!==1?'s':''} conciliada${visitReconciled!==1?'s':''}` : '';
+      const created_txt = visitCreated>0 ? `, ${visitCreated} criada${visitCreated!==1?'s':''} por visita` : '';
+      const upd_txt   = updMachines>0 ? `${updMachines} horímetro${updMachines!==1?'s':''} atualizado${updMachines!==1?'s':''}` : 'Alterações aplicadas';
+      const msg = `✓ ${upd_txt}${parts_txt}${new_txt}${visit_txt}${created_txt} · ${visits.length} visita${visits.length!==1?'s':''}`;
+
+      setMsg(msg,'var(--green)');
+      setSyncHeaderStatus('synced', _lastSyncAt);
+      if(!silent) toast(msg,'success');
+    }else{
+      _lastSyncHash = afterHash;
+      _lastSyncAt = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      setMsg('Sem alterações','var(--text2)');
+      setSyncHeaderStatus('synced', _lastSyncAt);
+    }
 
   }catch(e){
     console.error(e);
     setMsg('❌ '+e.message,'var(--red)');
-    toast('Erro ao sincronizar: '+e.message,'error');
+    setSyncHeaderStatus('error');
+    if(!silent) toast('Erro ao sincronizar: '+e.message,'error');
+  } finally {
     if(syncBtn){ syncBtn.textContent='↓ Sincronizar'; syncBtn.disabled=false; }
+    _syncInProgress = false;
   }
 }
 
@@ -3626,8 +3662,10 @@ async function loginEntrar(){
 
 // Sync automático por foco e por intervalo — UMA única instância de cada
 // (bug original: havia 2 instâncias duplicadas — corrigido aqui)
-window.addEventListener('focus', function(){ if(gsUrl && gsConnected) syncFromGS(); });
-setInterval(function(){ if(gsUrl && gsConnected) syncFromGS(); }, 60000);
+window.addEventListener('focus', function(){ if(gsUrl && gsConnected) syncFromGS({ silent:true }); });
+setInterval(function(){ if(gsUrl && gsConnected) syncFromGS({ silent:true }); }, 60000);
+setSyncHeaderStatus('pending');
+Promise.resolve().then(()=>syncFromGS({ silent:true }));
 
 </script>
 </body>
