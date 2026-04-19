@@ -661,6 +661,27 @@ tr:hover td{background:var(--gray-50)}
       <label class="form-label">Observações técnicas</label>
       <textarea class="form-textarea" id="pObs" placeholder="Substituir sempre em par, verificar torque, etc."></textarea>
     </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Slot funcional <span>opcional — para busca por tipo</span></label>
+        <input class="form-input" id="pSlot" list="slotSuggestions"
+               placeholder="ex: oil_filter, air_filter, separator, belt">
+        <datalist id="slotSuggestions">
+          <option value="oil_filter">
+          <option value="air_filter_primary">
+          <option value="air_filter_secondary">
+          <option value="separator">
+          <option value="belt">
+          <option value="oil">
+          <option value="seal_kit">
+          <option value="thermostat">
+          <option value="bearing_front">
+          <option value="bearing_rear">
+          <option value="min_pressure_valve">
+        </datalist>
+        <div class="form-hint">Identifica funcionalmente a peça para comparação entre modelos.</div>
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modalPart')">Cancelar</button>
       <button class="btn btn-primary" onclick="savePart()">Salvar peça</button>
@@ -875,6 +896,17 @@ tr:hover td{background:var(--gray-50)}
   <img id="lightboxImg" src="" alt="">
 </div>
 
+<!-- Modal: Compatibilidade de peça -->
+<div class="overlay" id="modalCompat">
+  <div class="modal">
+    <div class="modal-title">🔍 <span id="modalCompatTitle">Compatibilidade</span></div>
+    <div id="modalCompatBody" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('modalCompat')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(this)">
 <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(this)">
@@ -887,8 +919,8 @@ const DB_KEY = 'proper_admin_v2';
 const SNAPSHOT_PREFIX = 'proper_admin_snapshot_';
 
 // Incrementar este número a cada nova migração estrutural adicionada em runMigrations()
-// Versão atual: 1 (nenhuma migração estrutural ainda — Etapa 5 será a primeira)
-const CURRENT_SCHEMA_VERSION = 1;
+// Versão atual: 2 (slot funcional em peças + garantia de similarities)
+const CURRENT_SCHEMA_VERSION = 2;
 
 // ── Garante que schemaVersion existe — retrocompatível, ausência = versão 1 ──
 function ensureSchemaVersion(dbObj) {
@@ -990,13 +1022,23 @@ function runMigrations() {
 
   let snapshotTaken = false;
 
-  // ── Migração para versão 2: converter supplier (string) → suppliers (array) ──
-  // DESATIVADA ATÉ ETAPA 5 — placeholder para referência
-  // if (db.schemaVersion < 2) {
-  //   if (!snapshotTaken) { snapshotPreMigration('pre_v2'); snapshotTaken = true; }
-  //   _migrateSuppliersToArray();
-  //   db.schemaVersion = 2;
-  // }
+  if (db.schemaVersion < 2) {
+    if (!snapshotTaken) { snapshotPreMigration('pre_v2'); snapshotTaken = true; }
+
+    // Para cada peça em todos os modelos: garantir campo slot e similarities
+    db.models.forEach(m => {
+      const allParts = [
+        ...(m.directParts || []),
+        ...((m.subsystems || []).flatMap(s => s.parts || []))
+      ];
+      allParts.forEach(p => {
+        if (!p.slot) p.slot = '';
+        if (!p.similarities) p.similarities = [];
+      });
+    });
+
+    db.schemaVersion = 2;
+  }
 
   // Se alguma migração rodou, salvar
   if (snapshotTaken) {
@@ -1005,8 +1047,48 @@ function runMigrations() {
   }
 }
 
-// Placeholder — será implementada na Etapa 5
-// function _migrateSuppliersToArray() { ... }
+// Normaliza referência para comparação: remove pontos, traços, espaços, uppercase
+function normalizeRef(ref) {
+  return (ref || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
+// Retorna todas as peças de um modelo (diretas + de subsistemas)
+function getPartsByModel(modelId) {
+  const m = db.models.find(x => x.id === modelId);
+  if (!m) return [];
+  return [
+    ...(m.directParts || []),
+    ...((m.subsystems || []).flatMap(s => s.parts || []))
+  ];
+}
+
+// Busca reversa: dado um código/ref, retorna todos os modelos compatíveis
+function findModelsByPartRef(ref) {
+  const n = normalizeRef(ref);
+  if (!n) return [];
+  const result = [];
+  db.models.forEach(m => {
+    const parts = getPartsByModel(m.id);
+    parts.forEach(p => {
+      const refs = [
+        normalizeRef(p.ref),
+        ...(p.similarities || []).map(normalizeRef)
+      ];
+      if (refs.includes(n)) {
+        result.push({ modelId: m.id, brand: m.brand, model: m.model, part: p });
+      }
+    });
+  });
+  return result;
+}
+
+// Máquinas em campo que usam qualquer modelo compatível com esta ref
+function findMachinesByPartRef(ref) {
+  const models = findModelsByPartRef(ref);
+  return db.machines.filter(eq =>
+    models.some(m => modelKey(m.brand, m.model) === modelKey(eq.brand, eq.model))
+  );
+}
 
 // ─── Hash estável para comparação de db antes/depois de sync ─────────────
 function _stableStringify(v) {
@@ -1080,7 +1162,7 @@ function closeModalSafe(modalId) {
 // Limpa TODO o estado residual de modais — chamado em restore e importJSON
 function _resetModalState() {
   // Fechar todos os modais que estejam abertos
-  ['modalModel','modalSub','modalPart','modalMachine','modalMachineParts','modalClient']
+  ['modalModel','modalSub','modalPart','modalMachine','modalMachineParts','modalClient','modalCompat']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.remove('open');
@@ -1122,7 +1204,7 @@ function _bindModal(modalId) {
 }
 
 function initModalSystem() {
-  ['modalModel','modalSub','modalPart','modalMachine','modalMachineParts','modalClient']
+  ['modalModel','modalSub','modalPart','modalMachine','modalMachineParts','modalClient','modalCompat']
     .forEach(_bindModal);
 }
 
@@ -2107,6 +2189,7 @@ function renderPartsTable(parts,modelId,type,subId){
           ${apps.length?`<div style="font-size:10px;color:var(--text2);line-height:1.5">${apps.slice(0,2).join('<br>')}${apps.length>2?`<span style="color:var(--text3)"> +${apps.length-2}</span>`:''}</div>`:'<span style="color:var(--text3);font-size:10px">—</span>'}
         </td>
         <td><div class="row-actions">
+          ${p.ref ? `<button class="btn btn-secondary btn-sm" title="Ver compatibilidade" onclick="showCompatModal('${p.ref}','${p.name.replace(/'/g,"\\'")}')">⇄</button>` : ''}
           <button class="btn btn-secondary btn-sm" onclick="openEditPart('${modelId}','${type}',${subId?`'${subId}'`:'null'},'${p.id}')">Editar</button>
           <button class="btn btn-danger btn-sm" onclick="deletePart('${modelId}','${type}',${subId?`'${subId}'`:'null'},'${p.id}')">×</button>
         </div></td>
@@ -2359,6 +2442,7 @@ function openAddPart(modelId,type,subId){
   addPartTarget={modelId,type,subId}; editPartTarget=null; currentSims=[];
   document.getElementById('modalPartTitle').textContent='Nova peça';
   ['pName','pRef','pSupplier','pObs','simInput'].forEach(k=>{document.getElementById(k).value=''});
+  document.getElementById('pSlot').value='';
   document.getElementById('pQty').value=1;
   document.getElementById('pInterval').value='';
   document.getElementById('pCost').value='';
@@ -2383,6 +2467,7 @@ function openEditPart(modelId,type,subId,partId){
   document.getElementById('pCost').value=part.cost||'';
   document.getElementById('pCriticality').value=part.criticality||'normal';
   document.getElementById('pObs').value=part.obs||'';
+  document.getElementById('pSlot').value=part.slot||'';
   currentSims=[...(part.similarities||[])];
   renderSimTags();
   openModal('modalPart');
@@ -2416,6 +2501,7 @@ function savePart(){
     cost:parseFloat(document.getElementById('pCost').value)||0,
     criticality:document.getElementById('pCriticality').value,
     obs:document.getElementById('pObs').value.trim(),
+    slot:document.getElementById('pSlot').value.trim()||'',
     similarities:[...currentSims]
   };
   if(editPartTarget){
@@ -2435,6 +2521,41 @@ function savePart(){
     toast('Peça adicionada','success');
   }
   syncToGS('saveModel',{model:getModel(selModelId)});
+}
+
+function showCompatModal(ref, partName) {
+  const models = findModelsByPartRef(ref);
+  const machines = findMachinesByPartRef(ref);
+
+  document.getElementById('modalCompatTitle').textContent =
+    'Compatibilidade — ' + (partName || ref);
+
+  if (!models.length) {
+    document.getElementById('modalCompatBody').innerHTML =
+      '<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">Nenhum outro modelo encontrado para esta referência.</div>';
+  } else {
+    const machineCount = machines.length;
+    document.getElementById('modalCompatBody').innerHTML = `
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px">
+        Modelos compatíveis (${models.length})
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+        ${models.map(r => `
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--blue-pale);border:1px solid var(--blue-light);border-radius:var(--radius)">
+            <div>
+              <div style="font-weight:600;font-size:12px">${r.brand} ${r.model}</div>
+              <div style="font-size:10px;color:var(--text3)">${r.part.name}${r.part.slot ? ' · ' + r.part.slot : ''}</div>
+            </div>
+            <button class="btn btn-secondary btn-xs" onclick="selectModel('${r.modelId}');closeModal('modalCompat');showView('catalog')">Ver modelo</button>
+          </div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text2);padding:8px 12px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--border)">
+        🏭 <strong>${machineCount}</strong> máquina${machineCount !== 1 ? 's' : ''} em campo ${machineCount !== 1 ? 'usam' : 'usa'} ${machineCount !== 1 ? 'um' : 'o'} modelo compatível
+        ${machineCount > 0 ? `<button class="btn btn-secondary btn-xs" style="margin-left:8px" onclick="showView('machines');closeModal('modalCompat')">Ver máquinas</button>` : ''}
+      </div>
+    `;
+  }
+  openModal('modalCompat');
 }
 
 function deletePart(modelId,type,subId,partId){
