@@ -387,7 +387,7 @@ tr:hover td{background:var(--gray-50)}
 .stat-card.no-action{cursor:default;pointer-events:none}
 .stat-card.no-action:hover{box-shadow:none;border-color:var(--border);transform:none}
 
-.chips-wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .chip-overflow-btn{
   background:var(--gray-200);
   border:none;
@@ -399,7 +399,7 @@ tr:hover td{background:var(--gray-50)}
   cursor:pointer;
   font-family:inherit;
 }
-.chip-overflow-btn:hover{background:var(--gray-300);}
+.chip-overflow-btn:hover{background:var(--gray-300)}
 
 /* ── SIDEBAR OCULTA em views não-catálogo ── */
 .sidebar-hidden{display:none!important}
@@ -3342,7 +3342,7 @@ function renderClients(){
       <div class="stat-card ${unregistered.length?'':''}">
         <div class="stat-val" style="${unregistered.length?'color:var(--orange)':''}">${unregistered.length}</div>
         <div class="stat-lbl" style="${unregistered.length?'color:var(--orange)':''}">Cadastro incompleto</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">${unregistered.length} clientes</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${unregistered.length} cliente${unregistered.length!==1?'s':''}</div>
         <div class="card-tooltip">Clientes sem CNPJ, contato ou pasta Drive cadastrados</div>
       </div>
     </div>
