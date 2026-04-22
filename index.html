@@ -1477,6 +1477,7 @@ let gsConnected=false;
 let _syncInProgress=false;
 let _lastSyncHash=_dbHash(db);
 let _lastSyncAt='';
+let _bootSilentSyncPending=true;
 
 function normKey(v){ return String(v||'').trim().toLowerCase(); }
 
@@ -1588,7 +1589,14 @@ async function testGS(){
       setGsStatus('off'); return false;
     }
     const d=JSON.parse(txt);
-    if(d.status==='ok'){setGsStatus('connected');return true}
+    if(d.status==='ok'){
+      setGsStatus('connected');
+      if(_bootSilentSyncPending){
+        _bootSilentSyncPending=false;
+        Promise.resolve().then(()=>syncFromGS({ silent:true }));
+      }
+      return true;
+    }
     throw new Error(d.error||'resposta inesperada')
   }catch(e){
     console.warn('testGS:', e.message);
@@ -3844,12 +3852,10 @@ async function loginEntrar(){
 })();
 // ── END AUTH ──────────────────────────────────────────────
 
-// Sync automático por foco e por intervalo — UMA única instância de cada
-// (bug original: havia 2 instâncias duplicadas — corrigido aqui)
-window.addEventListener('focus', function(){ if(gsUrl && gsConnected) syncFromGS({ silent:true }); });
-setInterval(function(){ if(gsUrl && gsConnected) syncFromGS({ silent:true }); }, 60000);
 setSyncHeaderStatus('pending');
-Promise.resolve().then(()=>syncFromGS({ silent:true }));
+if(!gsUrl){
+  _bootSilentSyncPending=false;
+}
 
 </script>
 </body>
