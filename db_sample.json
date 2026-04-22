@@ -1,0 +1,369 @@
+{
+  "models": [
+    {
+      "id": "m1",
+      "brand": "Schulz",
+      "model": "SRP3010 III",
+      "type": "Compressor Parafuso",
+      "power": "10cv / 7,5kW",
+      "pressure": "10 bar",
+      "flow": "1150",
+      "voltage": "220/380V 3F",
+      "ampere": "28A",
+      "obs": "Modelo mais comum na carteira. Atenção ao separador em ambientes com poeira. Versão III tem filtro de ar primário com encaixe diferente.",
+      "photos": [],
+      "directParts": [
+        {
+          "id": "dp1",
+          "name": "Filtro de óleo",
+          "ref": "021.0093-0",
+          "interval": 2000,
+          "qty": 1,
+          "supplier": "Schulz",
+          "cost": 0,
+          "criticality": "normal",
+          "similarities": [
+            "W962",
+            "W9231"
+          ],
+          "obs": "Substituir a cada 2.000h ou anualmente",
+          "slot": ""
+        },
+        {
+          "id": "dp2",
+          "name": "Filtro de ar primário",
+          "ref": "C1140",
+          "interval": 2000,
+          "qty": 1,
+          "supplier": "Schulz",
+          "cost": 0,
+          "criticality": "normal",
+          "similarities": [
+            "C 1140"
+          ],
+          "obs": "Verificar elemento a cada 500h em ambientes com poeira",
+          "slot": ""
+        },
+        {
+          "id": "dp3",
+          "name": "Separador ar/óleo",
+          "ref": "007.0233-0",
+          "interval": 4000,
+          "qty": 1,
+          "supplier": "Schulz",
+          "cost": 0,
+          "criticality": "alta",
+          "similarities": [
+            "LB962"
+          ],
+          "obs": "Monitorar DP — substituir quando DP > 1 bar",
+          "slot": ""
+        },
+        {
+          "id": "dp4",
+          "name": "Óleo Compress 46 Semi",
+          "ref": "46 SEMI",
+          "interval": 2000,
+          "qty": 1,
+          "supplier": "Schulz",
+          "cost": 0,
+          "criticality": "normal",
+          "similarities": [
+            "Sin 46 Semi"
+          ],
+          "obs": "Trocar a cada 2.000h ou 1 ano",
+          "slot": ""
+        },
+        {
+          "id": "dp5",
+          "name": "Correia",
+          "ref": "3VX 335",
+          "interval": 4000,
+          "qty": 3,
+          "supplier": "Gates / OEM",
+          "cost": 0,
+          "criticality": "normal",
+          "similarities": [
+            "3VX335"
+          ],
+          "obs": "Substituir sempre o jogo completo",
+          "slot": ""
+        }
+      ],
+      "subsystems": [
+        {
+          "id": "s1",
+          "name": "Bloco Compressor",
+          "category": "Unidade Compressora",
+          "interval": 16000,
+          "desc": "Conjunto de parafusos macho e fêmea — núcleo de compressão",
+          "parts": [
+            {
+              "id": "sp1",
+              "name": "Rolamento dianteiro macho",
+              "ref": "6308-2RS",
+              "interval": 16000,
+              "qty": 1,
+              "supplier": "SKF / NSK",
+              "cost": 0,
+              "criticality": "alta",
+              "similarities": [
+                "6308 2RS",
+                "6308RS"
+              ],
+              "obs": "Substituir sempre em par com o da fêmea",
+              "slot": ""
+            },
+            {
+              "id": "sp2",
+              "name": "Rolamento dianteiro fêmea",
+              "ref": "6308-2RS",
+              "interval": 16000,
+              "qty": 1,
+              "supplier": "SKF / NSK",
+              "cost": 0,
+              "criticality": "alta",
+              "similarities": [],
+              "obs": "",
+              "slot": ""
+            },
+            {
+              "id": "sp3",
+              "name": "Kit vedação eixo",
+              "ref": "021.0080-0",
+              "interval": 8000,
+              "qty": 1,
+              "supplier": "Schulz",
+              "cost": 0,
+              "criticality": "alta",
+              "similarities": [],
+              "obs": "Verificar vazamento após montagem",
+              "slot": ""
+            }
+          ]
+        },
+        {
+          "id": "s2",
+          "name": "Sistema Termostático",
+          "category": "Sistema de Lubrificação",
+          "interval": 8000,
+          "desc": "Válvula termostática e regulação de temperatura de óleo",
+          "parts": [
+            {
+              "id": "sp4",
+              "name": "Reparo válvula termostática",
+              "ref": "021.0082-0",
+              "interval": 8000,
+              "qty": 1,
+              "supplier": "Schulz",
+              "cost": 0,
+              "criticality": "normal",
+              "similarities": [],
+              "obs": "Temperatura de abertura: 70°C",
+              "slot": ""
+            },
+            {
+              "id": "sp5",
+              "name": "Reparo válvula de admissão",
+              "ref": "021.0083-0",
+              "interval": 8000,
+              "qty": 1,
+              "supplier": "Schulz",
+              "cost": 0,
+              "criticality": "normal",
+              "similarities": [],
+              "obs": "",
+              "slot": ""
+            },
+            {
+              "id": "sp6",
+              "name": "Reparo válvula pressão mínima",
+              "ref": "021.0084-0",
+              "interval": 8000,
+              "qty": 1,
+              "supplier": "Schulz",
+              "cost": 0,
+              "criticality": "normal",
+              "similarities": [],
+              "obs": "Pressão de abertura: 4,5 bar",
+              "slot": ""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "machines": [
+    {
+      "id": "EQ-MODELO",
+      "client": "SORRAG",
+      "branch": "Filial - Andaimes",
+      "cnpj": "",
+      "contact": "Adilson",
+      "phone": "(37) 99999-0001",
+      "email": "fiscal@sorrag.com.br",
+      "city": "Cláudio / MG",
+      "lastVisit": "2026-03-13",
+      "nextVisit": "2026-04-13",
+      "brand": "Schulz",
+      "model": "SRP 3010 III",
+      "serial": "41805",
+      "year": 2023,
+      "type": "Compressor Parafuso",
+      "location": "Laser de Corte de Tubos",
+      "tag": "296-CP-01",
+      "hourTotal": 5091,
+      "hpw": 90,
+      "power": "10cv / 7,5kW",
+      "obs": "Ambiente com poeira — verificar filtro de ar a cada visita",
+      "driveLink": "",
+      "photos": [],
+      "updatedAt": "2026-03-25",
+      "parts": {
+        "filtro_oleo": {
+          "name": "Filtro de Óleo",
+          "lastChange": 5091,
+          "interval": 1000,
+          "ref": "W9231",
+          "na": false
+        },
+        "filtro_ar_prim": {
+          "name": "Filtro de Ar Primário",
+          "lastChange": 5091,
+          "interval": 500,
+          "ref": "C1140",
+          "na": false
+        },
+        "filtro_ar_secu": {
+          "name": "Filtro de Ar Secundário",
+          "lastChange": 0,
+          "interval": 4000,
+          "ref": "",
+          "na": true
+        },
+        "separador": {
+          "name": "Separador Ar/Óleo",
+          "lastChange": 3091,
+          "interval": 4000,
+          "ref": "007.0233-0",
+          "na": false
+        },
+        "oleo_lubrif": {
+          "name": "Óleo Lubrificante",
+          "lastChange": 5091,
+          "interval": 1000,
+          "ref": "46 SEMI",
+          "na": false
+        },
+        "v_termostatica": {
+          "name": "Válvula Termostática",
+          "lastChange": 0,
+          "interval": 8000,
+          "ref": "",
+          "na": true
+        },
+        "v_admissao": {
+          "name": "Válvula de Admissão",
+          "lastChange": 0,
+          "interval": 8000,
+          "ref": "",
+          "na": true
+        },
+        "v_pressao_min": {
+          "name": "Válvula Pressão Mínima",
+          "lastChange": 0,
+          "interval": 8000,
+          "ref": "",
+          "na": true
+        },
+        "correia": {
+          "name": "Correia",
+          "lastChange": 3091,
+          "interval": 3000,
+          "ref": "3VX 335",
+          "na": false
+        }
+      }
+    },
+    {
+      "id": "EQ-1776392432860",
+      "client": "Proper",
+      "branch": "",
+      "brand": "Puma",
+      "model": "PSBR10",
+      "serial": "2025",
+      "tag": "",
+      "year": 2022,
+      "location": "",
+      "hourTotal": 15000,
+      "hpw": 0,
+      "obs": "",
+      "driveLink": "",
+      "photos": [],
+      "parts": {
+        "filtro_oleo": {
+          "name": "Filtro de Óleo",
+          "lastChange": 14500,
+          "interval": 2000,
+          "ref": "",
+          "na": false
+        },
+        "filtro_ar_prim": {
+          "name": "Filtro de Ar Primário",
+          "lastChange": 15220,
+          "interval": 2000,
+          "ref": "",
+          "na": false
+        },
+        "filtro_ar_secu": {
+          "name": "Filtro de Ar Secundário",
+          "lastChange": 14800,
+          "interval": 4000,
+          "ref": "",
+          "na": false
+        },
+        "separador": {
+          "name": "Separador Ar/Óleo",
+          "lastChange": 15050,
+          "interval": 4000,
+          "ref": "",
+          "na": false
+        },
+        "oleo_lubrif": {
+          "name": "Óleo Lubrificante",
+          "lastChange": 15080,
+          "interval": 2000,
+          "ref": "",
+          "na": false
+        },
+        "correia": {
+          "name": "Correia",
+          "lastChange": 14900,
+          "interval": 4000,
+          "ref": "",
+          "na": false
+        }
+      },
+      "cnpj": "",
+      "contact": "",
+      "phone": "",
+      "email": "",
+      "city": ""
+    }
+  ],
+  "clients": [
+    {
+      "id": "CLI-MODELO",
+      "nome": "SORRAG",
+      "cnpj": "",
+      "cidade": "Cláudio / MG",
+      "telefone": "(37) 99999-0001",
+      "email": "fiscal@sorrag.com.br",
+      "antecedencia_alerta_dias": 30,
+      "drive_url": "",
+      "observacoes": "Cliente modelo — exemplo de cadastro completo.",
+      "updatedAt": "2026-03-25T00:00:00.000Z"
+    }
+  ],
+  "schemaVersion": 2
+}
