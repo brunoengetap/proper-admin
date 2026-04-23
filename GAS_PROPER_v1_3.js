@@ -11,6 +11,7 @@
 //   MACHINE_PARTS→ Último estado das peças por máquina
 //
 // NOVIDADE v1.3: PARTS_MASTER + PART_SIMILARITIES e endpoints de catálogo
+// IMPORTANTE: execute manualmente `migrateExistingIds()` 1x antes do deploy
 // ═══════════════════════════════════════════════════════════════════════════
 
 const SS = SpreadsheetApp.getActiveSpreadsheet();
@@ -43,9 +44,9 @@ const HEADERS = {
   MAQUINAS:      ['ID','Cliente','Filial','Marca','Modelo','Série','Ano','TAG','Localização','Hor.Total','h/Semana','Observações','Atualizado'],
   MODELOS:       ['ID','Marca','Modelo','Tipo','Potência','Pressão','Observações','Atualizado'],
   CLIENTES:      ['ID','Nome','CNPJ','Contato','Telefone','Email','Observações','Atualizado'],
-  VISITAS:       ['ID','Machine_ID','Cliente','Filial','Marca','Modelo','Série','TAG','Hor.Visita','h/Semana','Cenário','Técnico','Data Visita','Obs.Gerais','Enviado'],
-  PECAS_LOG:     ['ID_Visita','ID_Peça','Nome Peça','Ref.','Subsistema','Últ.Troca(h)','N/A','Observação'],
-  MACHINE_PARTS: ['Machine_ID','Serial','TAG','Part_ID','Part_Name','Last_Change_H','Interval_H','Ref','NA','Atualizado'],
+  VISITAS:       ['ID','Machine_ID','Cliente','Filial','Marca','Modelo','Série','TAG','Hor.Visita','h/Semana','Cenário','Técnico','Data Visita','Tipo','Obs.Gerais','Enviado'],
+  PECAS_LOG:     ['ID_Visita','ID_Peça','Nome Peça','Ref.','Subsistema','Últ.Troca(h)','N/A','Observação','Ref_Nova','Ref_Anterior','Tipo_Referencia','Acao','Horimetro','Data_Troca'],
+  MACHINE_PARTS: ['Machine_ID','Serial','TAG','Part_ID','Part_Name','Last_Change_H','Interval_H','Ref','NA','Atualizado','Ref_Anterior','Created_At'],
   PARTS_MASTER: ['Part_ID','Model_ID','Name','OEM_Ref','Part_Brand','Supplier_Primary','Slot','Qty_Default','Interval_H','Criticality','Cost','Obs','Updated_At'],
   PART_SIMILARITIES: ['Sim_ID','Part_ID','Model_ID','Ref_Similar','Brand_Similar','Obs','Updated_At']
 };
@@ -97,6 +98,15 @@ function doGet(e) {
       case 'getCatalogFull':
         result = getCatalogFull();
         break;
+      case 'getVisitsByMachine':
+        result = getVisitsByMachine(params.machine_id || '');
+        break;
+      case 'getMachinesByClient':
+        result = getMachinesByClient(params.client || '');
+        break;
+      case 'getClientsForField':
+        result = getClientsForField();
+        break;
       default:
         result = { status: 'error', error: 'Ação desconhecida: ' + action };
     }
@@ -123,6 +133,9 @@ function doPost(e) {
     switch (action) {
       case 'saveVisit':
         result = saveVisit(body);
+        break;
+      case 'savePreventiva':
+        result = savePreventiva(body);
         break;
       case 'saveMachine':
         result = saveMachine(body.machine);
@@ -205,6 +218,8 @@ function searchMachine(query) {
 // SAVE VISIT (from field checklist)
 // ═══════════════════════════════════════════════════════════════════════════
 function saveVisit(body) {
+  ensureSheetHeaders('VISITAS', HEADERS.VISITAS);
+  ensureSheetHeaders('PECAS_LOG', HEADERS.PECAS_LOG);
   const visitId = 'VIS-' + new Date().getTime();
   const now = new Date().toISOString();
   const visitDate = body.visitDate || new Date().toLocaleDateString('pt-BR');
@@ -228,6 +243,7 @@ function saveVisit(body) {
     body.scenario || '',
     body.tech     || '',
     visitDate,
+    body.tipo || 'inspecao',
     body.generalObs || '',
     now
   ]);
@@ -243,7 +259,13 @@ function saveVisit(body) {
       ps.sub   || '',
       parseInt(ps.lastChange) || 0,
       ps.na ? 'SIM' : 'NÃO',
-      ps.obs   || ''
+      ps.obs   || '',
+      '',
+      '',
+      '',
+      '',
+      parseInt(body.hourTotal) || 0,
+      now
     ]);
   });
 
@@ -261,6 +283,7 @@ function saveVisit(body) {
 // UPDATE MACHINE PARTS
 // ═══════════════════════════════════════════════════════════════════════════
 function updateMachineParts(body) {
+  ensureSheetHeaders('MACHINE_PARTS', HEADERS.MACHINE_PARTS);
   const machineId = String(body.machine_id || '').trim();
   const serial    = String(body.serial     || '').trim();
   const tag       = String(body.tag        || '').trim();
@@ -277,6 +300,9 @@ function updateMachineParts(body) {
   const idxSer  = headers.indexOf('Serial');
   const idxTag  = headers.indexOf('TAG');
   const idxPid  = headers.indexOf('Part_ID');
+  const idxRef  = headers.indexOf('Ref');
+  const idxRefAnterior = headers.indexOf('Ref_Anterior');
+  const idxCreatedAt = headers.indexOf('Created_At');
   const now     = new Date().toISOString();
 
   Object.entries(parts).forEach(([partId, ps]) => {
@@ -296,20 +322,37 @@ function updateMachineParts(body) {
       }
     }
 
-    const rowData = [
-      machineId, serial, tag,
-      partId,
-      ps.name     || partId,
-      parseInt(ps.lastChange) || 0,
-      parseInt(ps.interval)   || 2000,
-      ps.ref || '',
-      ps.na  ? 'SIM' : 'NÃO',
-      now
-    ];
-
     if (rowIdx > 0) {
+      const existingRef = String(sheet.getRange(rowIdx, idxRef + 1).getValue() || '');
+      const incomingRef = String(ps.ref || '');
+      const refAnterior = (incomingRef && existingRef && incomingRef !== existingRef) ? existingRef : String(sheet.getRange(rowIdx, idxRefAnterior + 1).getValue() || '');
+      const createdAt = String(sheet.getRange(rowIdx, idxCreatedAt + 1).getValue() || '');
+      const rowData = [
+        machineId, serial, tag,
+        partId,
+        ps.name     || partId,
+        parseInt(ps.lastChange) || 0,
+        parseInt(ps.interval)   || 2000,
+        incomingRef,
+        ps.na  ? 'SIM' : 'NÃO',
+        now,
+        refAnterior,
+        createdAt
+      ];
       sheet.getRange(rowIdx, 1, 1, HEADERS.MACHINE_PARTS.length).setValues([rowData]);
     } else {
+      const rowData = [
+        machineId, serial, tag,
+        partId,
+        ps.name     || partId,
+        parseInt(ps.lastChange) || 0,
+        parseInt(ps.interval)   || 2000,
+        ps.ref || '',
+        ps.na  ? 'SIM' : 'NÃO',
+        now,
+        '',
+        now
+      ];
       sheet.appendRow(rowData);
     }
   });
@@ -380,6 +423,7 @@ function getMachinePartsById(machineId, serial, tag) {
 // GET VISITS NORMALIZED
 // ═══════════════════════════════════════════════════════════════════════════
 function getVisitsNormalized() {
+  ensureSheetHeaders('VISITAS', HEADERS.VISITAS);
   const sheet = getOrCreateSheet('VISITAS', HEADERS.VISITAS);
   const data  = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
@@ -402,6 +446,7 @@ function getVisitsNormalized() {
       scenario:   obj['Cenário']      || '',
       tech:       obj['Técnico']      || '',
       visitDate:  obj['Data Visita']  || '',
+      tipo:       obj['Tipo']         || 'inspecao',
       generalObs: obj['Obs.Gerais']   || '',
       'Machine_ID':  obj['Machine_ID']  || '',
       'Série':       obj['Série']       || '',
@@ -412,6 +457,279 @@ function getVisitsNormalized() {
       'Visit_Date':  obj['Data Visita'] || '',
     };
   });
+}
+
+function savePreventiva(body) {
+  ensureSheetHeaders('VISITAS', HEADERS.VISITAS);
+  ensureSheetHeaders('PECAS_LOG', HEADERS.PECAS_LOG);
+  ensureSheetHeaders('MACHINE_PARTS', HEADERS.MACHINE_PARTS);
+
+  if (!body || !body.visitDate || body.hourTotal === undefined || body.hourTotal === null || !body.parts) {
+    return { status: 'error', error: 'Campos obrigatórios: machine_id/tipo/visitDate/hourTotal/parts' };
+  }
+
+  const parts = body.parts || {};
+  const validAcoes = { trocada: true, conferida: true, na: true };
+  for (const [partId, ps] of Object.entries(parts)) {
+    const acao = String((ps && ps.acao) || '').trim().toLowerCase();
+    const partName = (ps && ps.name) || partId;
+    if (!validAcoes[acao]) {
+      return { status: 'error', error: 'Peça ' + partName + ': acao inválida' };
+    }
+    if (acao === 'trocada' && !String((ps && ps.ref) || '').trim()) {
+      return { status: 'error', error: 'Peça ' + partName + ': ref obrigatória para acao=trocada' };
+    }
+  }
+
+  const visitSheet = getOrCreateSheet('VISITAS', HEADERS.VISITAS);
+  const visitsData = visitSheet.getDataRange().getValues();
+  const visitHeaders = visitsData[0] || HEADERS.VISITAS;
+  const idxVisitId = visitHeaders.indexOf('ID');
+  const visitId = String(body.visit_id || ('VIS-' + new Date().getTime() + '-' + Math.floor(Math.random() * 100000))).trim();
+
+  for (let i = 1; i < visitsData.length; i++) {
+    if (String(visitsData[i][idxVisitId] || '').trim() === visitId) {
+      return { status: 'ok', visitId, duplicate: true };
+    }
+  }
+
+  let machineId = String(body.machine_id || '').trim();
+  if (!machineId || !machineId.startsWith('MK-')) {
+    machineId = machineKey(body.client || '', body.brand || '', body.model || '', body.serial || '');
+  }
+
+  const now = new Date().toISOString();
+  ensureMachineFromVisit(body, machineId, body.visitDate, now);
+
+  visitSheet.appendRow([
+    visitId,
+    machineId,
+    body.client   || '',
+    body.branch   || '',
+    body.brand    || '',
+    body.model    || '',
+    body.serial   || '',
+    body.tag      || '',
+    parseInt(body.hourTotal) || 0,
+    parseInt(body.hpw)       || 0,
+    body.scenario || '',
+    body.tech     || '',
+    body.visitDate || now,
+    body.tipo || 'preventiva',
+    body.generalObs || '',
+    now
+  ]);
+
+  const partsSheet = getOrCreateSheet('PECAS_LOG', HEADERS.PECAS_LOG);
+  let pecasTrocadas = 0;
+  Object.entries(parts).forEach(([partId, ps]) => {
+    const acao = String(ps.acao || '').trim().toLowerCase();
+    const refNova = String(ps.ref || '').trim();
+    const refAnterior = String(ps.refAnterior || '').trim() || getCurrentRefFromMachineParts(machineId, body.serial || '', body.tag || '', partId);
+
+    partsSheet.appendRow([
+      visitId,
+      partId,
+      ps.name || partId,
+      refNova || refAnterior || '',
+      ps.sub || '',
+      parseInt(ps.lastChange) || 0,
+      ps.na ? 'SIM' : 'NÃO',
+      ps.obs || '',
+      refNova,
+      refAnterior,
+      ps.tipoReferencia || '',
+      acao,
+      parseInt(body.hourTotal) || 0,
+      now
+    ]);
+
+    if (acao === 'trocada') {
+      updateMachinePartFromPreventiva({
+        machine_id: machineId,
+        serial: body.serial || '',
+        tag: body.tag || '',
+        partId,
+        name: ps.name || partId,
+        interval: parseInt(ps.interval) || 2000,
+        refNova: refNova,
+        refAnterior,
+        na: ps.na ? 'SIM' : 'NÃO',
+        hourTotal: parseInt(body.hourTotal) || 0,
+        now
+      });
+      pecasTrocadas++;
+    }
+    // conferida e na: NÃO tocar em MACHINE_PARTS — intencional
+  });
+
+  updateMachineHorímetro(machineId, body.serial || '', body.tag || '', parseInt(body.hourTotal) || 0, body.visitDate || now);
+  return { status: 'ok', visitId, machineId, pecasTrocadas, duplicate: false };
+}
+
+function getVisitsByMachine(machineId) {
+  const mId = String(machineId || '').trim();
+  if (!mId) return { status: 'error', error: 'machine_id obrigatório' };
+  ensureSheetHeaders('VISITAS', HEADERS.VISITAS);
+  ensureSheetHeaders('PECAS_LOG', HEADERS.PECAS_LOG);
+
+  const allVisits = getSheetData('VISITAS');
+  const visits = allVisits
+    .filter(v => String(v['Machine_ID'] || '').trim() === mId)
+    .map(v => ({
+      visitId:    v['ID'] || '',
+      machine_id: v['Machine_ID'] || '',
+      tipo:       v['Tipo'] || 'inspecao',
+      visitDate:  v['Data Visita'] || '',
+      hourTotal:  parseInt(v['Hor.Visita']) || 0,
+      tech:       v['Técnico'] || '',
+      scenario:   v['Cenário'] || '',
+      generalObs: v['Obs.Gerais'] || '',
+      client:     v['Cliente'] || '',
+      brand:      v['Marca'] || '',
+      model:      v['Modelo'] || ''
+    }));
+
+  visits.sort((a, b) => new Date(b.visitDate) - new Date(a.visitDate));
+  const allPecasLog = getSheetData('PECAS_LOG');
+  const visitIds = new Set(visits.map(v => String(v.visitId || '').trim()));
+  const pecasLog = {};
+  allPecasLog.forEach(p => {
+    const vid = String(p['ID_Visita'] || '').trim();
+    if (!visitIds.has(vid)) return;
+    if (!pecasLog[vid]) pecasLog[vid] = [];
+    pecasLog[vid].push({
+      partId:         p['ID_Peça'] || '',
+      name:           p['Nome Peça'] || '',
+      acao:           p['Acao'] || '',
+      refNova:        p['Ref_Nova'] || p['Ref.'] || '',
+      refAnterior:    p['Ref_Anterior'] || '',
+      tipoReferencia: p['Tipo_Referencia'] || '',
+      horimetro:      parseInt(p['Horimetro']) || 0,
+      dataTroca:      p['Data_Troca'] || '',
+      na:             String(p['N/A'] || '').toUpperCase() === 'SIM',
+      obs:            p['Observação'] || ''
+    });
+  });
+  return { status: 'ok', visits, pecasLog };
+}
+
+function getMachinesByClient(clientQuery) {
+  const q = String(clientQuery || '').trim();
+  if (!q) return { status: 'error', error: 'client obrigatório' };
+  // Anti-duplicidade (referência para o fluxo do campo):
+  // 1) machineKey(client, brand, model, serial)
+  // 2) cliente + série
+  // 3) cliente + TAG
+  // Se encontrar em qualquer nível, não criar nova máquina.
+  const norm = v => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  const machines = getSheetData('MAQUINAS')
+    .filter(m => norm(m['Cliente']).includes(norm(q)))
+    .map(m => {
+      const eq = rowToMachineFromObj(m);
+      eq.parts = getMachinePartsById(eq.id, eq.serial, eq.tag);
+      return eq;
+    });
+  return { status: 'ok', machines };
+}
+
+function getClientsForField() {
+  const names = getSheetData('MAQUINAS')
+    .map(m => String(m['Cliente'] || '').trim())
+    .filter(Boolean);
+  const unique = [...new Set(names)].sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+  return { status: 'ok', clients: unique };
+}
+
+function getCurrentRefFromMachineParts(machineId, serial, tag, partId) {
+  const sheet = getOrCreateSheet('MACHINE_PARTS', HEADERS.MACHINE_PARTS);
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return '';
+  const headers = data[0];
+  const idxMid = headers.indexOf('Machine_ID');
+  const idxSer = headers.indexOf('Serial');
+  const idxTag = headers.indexOf('TAG');
+  const idxPid = headers.indexOf('Part_ID');
+  const idxRef = headers.indexOf('Ref');
+
+  for (let i = 1; i < data.length; i++) {
+    const rowMid = String(data[i][idxMid] || '').trim();
+    const rowSer = String(data[i][idxSer] || '').trim();
+    const rowTag = String(data[i][idxTag] || '').trim();
+    const rowPid = String(data[i][idxPid] || '').trim();
+    const match = (machineId && rowMid === String(machineId).trim()) ||
+                  (serial && rowSer === String(serial).trim()) ||
+                  (tag && rowTag === String(tag).trim());
+    if (match && rowPid === String(partId).trim()) {
+      return String(data[i][idxRef] || '').trim();
+    }
+  }
+  return '';
+}
+
+function updateMachinePartFromPreventiva(payload) {
+  const machineId = String(payload.machine_id || '').trim();
+  const serial = String(payload.serial || '').trim();
+  const tag = String(payload.tag || '').trim();
+  const partId = String(payload.partId || '').trim();
+  if (!partId) return;
+
+  const sheet = getOrCreateSheet('MACHINE_PARTS', HEADERS.MACHINE_PARTS);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idxMid = headers.indexOf('Machine_ID');
+  const idxSer = headers.indexOf('Serial');
+  const idxTag = headers.indexOf('TAG');
+  const idxPid = headers.indexOf('Part_ID');
+  const idxRef = headers.indexOf('Ref');
+  const idxRefAnterior = headers.indexOf('Ref_Anterior');
+  const idxCreatedAt = headers.indexOf('Created_At');
+
+  for (let i = 1; i < data.length; i++) {
+    const rowMid = String(data[i][idxMid] || '').trim();
+    const rowSer = String(data[i][idxSer] || '').trim();
+    const rowTag = String(data[i][idxTag] || '').trim();
+    const rowPid = String(data[i][idxPid] || '').trim();
+    const match = (machineId && rowMid === machineId) ||
+                  (serial && rowSer === serial) ||
+                  (tag && rowTag === tag);
+    if (match && rowPid === partId) {
+      const currentRef = String(data[i][idxRef] || '').trim();
+      const refAnterior = String(payload.refAnterior || '').trim() || ((currentRef && currentRef !== String(payload.refNova || '').trim()) ? currentRef : String(data[i][idxRefAnterior] || '').trim());
+      const createdAt = String(data[i][idxCreatedAt] || '').trim();
+      const updated = [
+        machineId || rowMid,
+        serial || rowSer,
+        tag || rowTag,
+        partId,
+        payload.name || rowPid,
+        parseInt(payload.hourTotal) || 0,
+        parseInt(payload.interval) || 2000,
+        String(payload.refNova || '').trim(),
+        String(payload.na || '').toUpperCase() === 'SIM' ? 'SIM' : 'NÃO',
+        payload.now || new Date().toISOString(),
+        refAnterior,
+        createdAt || (payload.now || new Date().toISOString())
+      ];
+      sheet.getRange(i + 1, 1, 1, HEADERS.MACHINE_PARTS.length).setValues([updated]);
+      return;
+    }
+  }
+
+  sheet.appendRow([
+    machineId,
+    serial,
+    tag,
+    partId,
+    payload.name || partId,
+    parseInt(payload.hourTotal) || 0,
+    parseInt(payload.interval) || 2000,
+    String(payload.refNova || '').trim(),
+    String(payload.na || '').toUpperCase() === 'SIM' ? 'SIM' : 'NÃO',
+    payload.now || new Date().toISOString(),
+    String(payload.refAnterior || '').trim(),
+    payload.now || new Date().toISOString()
+  ]);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -760,6 +1078,31 @@ function rowToMachine(row) {
 
 function rowToMachineFromObj(row) {
   return rowToMachine(row);
+}
+
+function ensureSheetHeaders(sheetName, expectedHeaders) {
+  const sheet = getOrCreateSheet(sheetName, expectedHeaders);
+  if (sheet.getLastColumn() === 0) {
+    sheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
+    sheet.getRange(1, 1, 1, expectedHeaders.length)
+      .setFontWeight('bold')
+      .setBackground('#1a3a6b')
+      .setFontColor('#ffffff');
+    sheet.setFrozenRows(1);
+    return;
+  }
+
+  const current = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  expectedHeaders.forEach(col => {
+    if (!current.includes(col)) {
+      const newColIdx = sheet.getLastColumn() + 1;
+      sheet.getRange(1, newColIdx)
+        .setValue(col)
+        .setFontWeight('bold')
+        .setBackground('#1a3a6b')
+        .setFontColor('#ffffff');
+    }
+  });
 }
 
 function getOrCreateSheet(name, headers) {
