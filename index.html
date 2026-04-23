@@ -673,8 +673,14 @@ tr:hover td{background:var(--gray-50)}
         <input class="form-input" id="pQty" type="number" min="1" value="1">
       </div>
       <div class="form-group">
-        <label class="form-label">Fornecedor padrão</label>
-        <input class="form-input" id="pSupplier" placeholder="ex: Schulz, SKF, Gates">
+        <label class="form-label">Marca / Fabricante <span>opcional</span></label>
+        <input class="form-input" id="pPartBrand" placeholder="ex: Mann, SKF, Gates, Schulz">
+        <div class="form-hint">Quem fabrica a peça.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fornecedor principal <span>opcional</span></label>
+        <input class="form-input" id="pSupplierPrimary" placeholder="ex: Distribuidora Silva, Schulz">
+        <div class="form-hint">Quem vende / distribui.</div>
       </div>
     </div>
     <div class="form-row">
@@ -693,13 +699,20 @@ tr:hover td{background:var(--gray-50)}
     </div>
     <!-- Similaridades -->
     <div class="form-group">
-      <label class="form-label">Referências similares / compatíveis <span>pressione Enter para adicionar</span></label>
-      <div style="display:flex;gap:6px;margin-bottom:6px">
-        <input class="form-input" id="simInput" placeholder="Código similar ou genérico" onkeydown="if(event.key==='Enter'){event.preventDefault();addSim()}">
+      <label class="form-label">
+        Equivalências / Similares
+        <span>pressione Enter para adicionar</span>
+      </label>
+      <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+        <input class="form-input" id="simRefInput" placeholder="Ref. equivalente (ex: W962)"
+               style="flex:2;min-width:120px"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addSim()}">
+        <input class="form-input" id="simBrandInput" placeholder="Marca (ex: Mann)"
+               style="flex:1;min-width:90px">
         <button class="btn btn-secondary btn-sm" onclick="addSim()">+ Adicionar</button>
       </div>
       <div class="sim-row" id="simTags"></div>
-      <div class="form-hint">Use para registrar peças genéricas, reposições compatíveis ou equivalentes de outras marcas.</div>
+      <div class="form-hint">Referências intercambiáveis: genéricas, outras marcas, números de catálogo antigos.</div>
     </div>
     <div class="form-group">
       <label class="form-label">Observações técnicas</label>
@@ -963,8 +976,8 @@ const DB_KEY = 'proper_admin_v2';
 const SNAPSHOT_PREFIX = 'proper_admin_snapshot_';
 
 // Incrementar este número a cada nova migração estrutural adicionada em runMigrations()
-// Versão atual: 2 (slot funcional em peças + garantia de similarities)
-const CURRENT_SCHEMA_VERSION = 2;
+// Versão atual: 3 (v2->v3: supplierPrimary/partBrand + similares objeto)
+const CURRENT_SCHEMA_VERSION = 3;
 
 // ── Garante que schemaVersion existe — retrocompatível, ausência = versão 1 ──
 function ensureSchemaVersion(dbObj) {
@@ -1084,6 +1097,30 @@ function runMigrations() {
     db.schemaVersion = 2;
   }
 
+  if (db.schemaVersion < 3) {
+    if (!snapshotTaken) { snapshotPreMigration('pre_v3'); snapshotTaken = true; }
+
+    db.models.forEach(m => {
+      const allParts = [
+        ...(m.directParts || []),
+        ...((m.subsystems || []).flatMap(s => s.parts || []))
+      ];
+      allParts.forEach(p => {
+        if (!p.supplierPrimary) p.supplierPrimary = p.supplier || '';
+        if (!p.partBrand) p.partBrand = '';
+        if (Array.isArray(p.similarities)) {
+          p.similarities = p.similarities.map(s =>
+            typeof s === 'string' ? { ref: s, brand: '', obs: '' } : s
+          );
+        } else {
+          p.similarities = [];
+        }
+      });
+    });
+
+    db.schemaVersion = 3;
+  }
+
   // Se alguma migração rodou, salvar
   if (snapshotTaken) {
     save();
@@ -1116,7 +1153,7 @@ function findModelsByPartRef(ref) {
     parts.forEach(p => {
       const refs = [
         normalizeRef(p.ref),
-        ...(p.similarities || []).map(normalizeRef)
+        ...(p.similarities || []).map(s => normalizeRef(typeof s === 'string' ? s : s.ref))
       ];
       if (refs.includes(n)) {
         result.push({ modelId: m.id, brand: m.brand, model: m.model, part: p });
@@ -1260,8 +1297,9 @@ const HELP_CONTENT = {
   pRef:         { title: 'Referência / Código OEM', body: 'Código do fabricante ou fornecedor. Ex: 021.0093-0. Use para identificar a peça na hora da compra.' },
   pInterval:    { title: 'Intervalo padrão (h)', body: 'Periodicidade recomendada de troca em horas de operação. Ex: 2000h = trocar a cada 2.000 horas.' },
   pCriticality: { title: 'Criticidade', body: 'Normal: substituição planejada. Alta: causa parada imediata se falhar. Segurança: exigência NR12/NR13.' },
-  simInput:     { title: 'Referências similares', body: 'Códigos alternativos compatíveis — genéricos, reposições de outras marcas. Pressione Enter para adicionar cada um.' },
-  pSupplier:    { title: 'Fornecedor padrão', body: 'Fornecedor habitual desta peça. Serve como referência de compra.' },
+  pPartBrand:   { title: 'Marca / Fabricante', body: 'Quem fabrica a peça. Ex: Mann, SKF, Gates, Schulz. Pode ser diferente de quem vende.' },
+  pSupplierPrimary: { title: 'Fornecedor principal', body: 'Empresa ou distribuidor que vende esta peça. Ex: Distribuidora Silva, Schulz Direto.' },
+  simRefInput:  { title: 'Referência equivalente', body: 'Código de uma peça intercambiável com esta. Adicione uma por vez com a marca correspondente.' },
   // Modal de máquina
   mcHour:       { title: 'Horímetro atual (h)', body: 'Total de horas acumuladas no equipamento. Usado para calcular quando cada peça vence.' },
   mcHpw:        { title: 'Horas por semana', body: 'Estimativa de uso semanal. Serve para projetar a próxima troca em dias no calendário.' },
@@ -2205,8 +2243,10 @@ function renderPartsTable(parts,modelId,type,subId){
       }
       // Similares também
       (p.similarities||[]).forEach(sim=>{
-        if(!refIndex[sim]) refIndex[sim]=new Set();
-        refIndex[sim].add(m.brand+' '+m.model);
+        const simRef=typeof sim==='string'?sim:(sim?.ref||'');
+        if(!simRef) return;
+        if(!refIndex[simRef]) refIndex[simRef]=new Set();
+        refIndex[simRef].add(m.brand+' '+m.model);
       });
     });
   });
@@ -2231,7 +2271,10 @@ function renderPartsTable(parts,modelId,type,subId){
       // Calcular aplicações cruzadas desta referência
       const appsSet=new Set();
       if(p.ref&&refIndex[p.ref]){refIndex[p.ref].forEach(a=>{if(a!==getModel(modelId)?.brand+' '+getModel(modelId)?.model) appsSet.add(a);});}
-      (p.similarities||[]).forEach(sim=>{if(refIndex[sim]){refIndex[sim].forEach(a=>{if(a!==getModel(modelId)?.brand+' '+getModel(modelId)?.model) appsSet.add(a);});}});
+      (p.similarities||[]).forEach(sim=>{
+        const simRef=typeof sim==='string'?sim:(sim?.ref||'');
+        if(refIndex[simRef]){refIndex[simRef].forEach(a=>{if(a!==getModel(modelId)?.brand+' '+getModel(modelId)?.model) appsSet.add(a);});}
+      });
       const apps=[...appsSet];
 
       return`<tr>
@@ -2243,9 +2286,28 @@ function renderPartsTable(parts,modelId,type,subId){
           ${p.ref?`<span class="td-ref" style="cursor:pointer" title="Clique para copiar" onclick="navigator.clipboard?.writeText('${p.ref}');this.textContent='✓ copiado!';setTimeout(()=>this.textContent='${p.ref}',1500)">${p.ref}</span>`:'<span style="color:var(--text3)">—</span>'}
         </td>
         <td><span style="font-size:12px;${p.interval?'color:var(--text2)':'color:var(--text3)'}">${p.interval?p.interval+'h':'—'}</span></td>
-        <td>${p.supplier?`<span class="td-supplier">${p.supplier}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
         <td>
-          ${(p.similarities||[]).length?`<div class="sim-row">${p.similarities.map(s=>`<span class="sim-tag" style="cursor:pointer" title="Clique para copiar" onclick="navigator.clipboard?.writeText('${s}');this.style.background='var(--green-light)';this.style.color='var(--green)';setTimeout(()=>{this.style.background='';this.style.color='';},1200)">${s}</span>`).join('')}</div>`:'<span style="color:var(--text3);font-size:11px">—</span>'}
+          ${p.partBrand?`<div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px">${p.partBrand}</div>`:''}
+          ${(p.supplierPrimary||p.supplier)?`<span class="td-supplier">${p.supplierPrimary||p.supplier}</span>`:'<span style="color:var(--text3)">—</span>'}
+        </td>
+        <td>
+          ${(p.similarities||[]).length
+            ?`<div class="sim-row">
+              ${(p.similarities).map(s=>{
+                const ref=typeof s==='string'?s:(s.ref||'');
+                const brand=typeof s==='object'&&s.brand?s.brand:'';
+                return `<span class="sim-tag"
+                  title="${brand}"
+                  style="cursor:pointer"
+                  onclick="navigator.clipboard?.writeText('${ref}');
+                           this.style.background='var(--green-light)';
+                           this.style.color='var(--green)';
+                           setTimeout(()=>{this.style.background='';this.style.color='';},1200)">
+                  ${ref}${brand?`<span style="font-size:9px;opacity:.7;margin-left:3px">${brand}</span>`:''}
+                </span>`;
+              }).join('')}
+            </div>`
+            :'<span style="color:var(--text3);font-size:11px">—</span>'}
         </td>
         <td>
           ${apps.length?`<div style="font-size:10px;color:var(--text2);line-height:1.5">${apps.slice(0,2).join('<br>')}${apps.length>2?`<span style="color:var(--text3)"> +${apps.length-2}</span>`:''}</div>`:'<span style="color:var(--text3);font-size:10px">—</span>'}
@@ -2505,7 +2567,9 @@ function deleteSub(modelId,subId){
 function openAddPart(modelId,type,subId){
   addPartTarget={modelId,type,subId}; editPartTarget=null; currentSims=[];
   document.getElementById('modalPartTitle').textContent='Nova peça';
-  ['pName','pRef','pSupplier','pObs','simInput'].forEach(k=>{document.getElementById(k).value=''});
+  ['pName','pRef','pObs','simRefInput','simBrandInput'].forEach(k=>{document.getElementById(k).value=''});
+  document.getElementById('pPartBrand').value='';
+  document.getElementById('pSupplierPrimary').value='';
   document.getElementById('pSlot').value='';
   document.getElementById('pQty').value=1;
   document.getElementById('pInterval').value='';
@@ -2527,30 +2591,53 @@ function openEditPart(modelId,type,subId,partId){
   document.getElementById('pRef').value=part.ref||'';
   document.getElementById('pInterval').value=part.interval||'';
   document.getElementById('pQty').value=part.qty||1;
-  document.getElementById('pSupplier').value=part.supplier||'';
+  document.getElementById('pPartBrand').value=part.partBrand||'';
+  document.getElementById('pSupplierPrimary').value=part.supplierPrimary||part.supplier||'';
   document.getElementById('pCost').value=part.cost||'';
   document.getElementById('pCriticality').value=part.criticality||'normal';
   document.getElementById('pObs').value=part.obs||'';
   document.getElementById('pSlot').value=part.slot||'';
-  currentSims=[...(part.similarities||[])];
+  currentSims=(part.similarities||[]).map(s=>typeof s==='string'?{ref:s,brand:'',obs:''}:s);
   renderSimTags();
   openModal('modalPart');
   _captureFormSnapshot('modalPart');
 }
 
 function addSim(){
-  const inp=document.getElementById('simInput');
-  const val=inp.value.trim();
-  if(!val||currentSims.includes(val)) return;
-  currentSims.push(val); inp.value=''; renderSimTags();
+  const ref=document.getElementById('simRefInput').value.trim();
+  const brand=document.getElementById('simBrandInput').value.trim();
+  if(!ref) return;
+  if(currentSims.find(s=>s.ref===ref)) return;
+  currentSims.push({ref,brand,obs:''});
+  document.getElementById('simRefInput').value='';
+  document.getElementById('simBrandInput').value='';
+  renderSimTags();
 }
 
 function removeSim(idx){currentSims.splice(idx,1);renderSimTags()}
 
 function renderSimTags(){
-  document.getElementById('simTags').innerHTML=currentSims.map((s,i)=>
-    `<span class="sim-tag">${s}<span class="sim-rm" onclick="removeSim(${i})">×</span></span>`
-  ).join('');
+  document.getElementById('simTags').innerHTML=currentSims.map((s,i)=>{
+    const label=typeof s==='string'?s:s.ref;
+    const brand=typeof s==='object'&&s.brand?' · '+s.brand:'';
+    return `<span class="sim-tag"><strong>${label}</strong>${brand}<span class="sim-rm" onclick="removeSim(${i})">×</span></span>`;
+  }).join('');
+}
+
+function getPartById(modelId,type,subId,partId){
+  const m=getModel(modelId);
+  if(!m) return null;
+  if(type==='direct') return m.directParts.find(p=>p.id===partId)||null;
+  const s=(m.subsystems||[]).find(s=>s.id===subId);
+  return s?s.parts.find(p=>p.id===partId)||null:null;
+}
+
+function getLastAddedPart(modelId,type,subId){
+  const m=getModel(modelId);
+  if(!m) return null;
+  if(type==='direct') return m.directParts[m.directParts.length-1]||null;
+  const s=(m.subsystems||[]).find(s=>s.id===subId);
+  return s?s.parts[s.parts.length-1]||null:null;
 }
 
 function savePart(){
@@ -2559,20 +2646,23 @@ function savePart(){
   const data={
     name,
     ref:document.getElementById('pRef').value.trim(),
+    partBrand:document.getElementById('pPartBrand').value.trim(),
+    supplierPrimary:document.getElementById('pSupplierPrimary').value.trim(),
     interval:parseInt(document.getElementById('pInterval').value)||0,
     qty:parseInt(document.getElementById('pQty').value)||1,
-    supplier:document.getElementById('pSupplier').value.trim(),
     cost:parseFloat(document.getElementById('pCost').value)||0,
     criticality:document.getElementById('pCriticality').value,
     obs:document.getElementById('pObs').value.trim(),
     slot:document.getElementById('pSlot').value.trim()||'',
-    similarities:[...currentSims]
+    similarities:currentSims.map(s=>typeof s==='string'?{ref:s,brand:'',obs:''}:{...s})
   };
+  let context=null;
   if(editPartTarget){
     const{modelId,type,subId,partId}=editPartTarget;
     const m=getModel(modelId);
     if(type==='direct'){const p=m.directParts.find(p=>p.id===partId);Object.assign(p,data)}
     else{const s=m.subsystems.find(s=>s.id===subId);const p=s.parts.find(p=>p.id===partId);Object.assign(p,data)}
+    context={modelId,type,subId,partId,isEdit:true};
     const wasSubTab=editPartTarget.type==='sub';
     _captureFormSnapshot('modalPart');
     save(); closeModal('modalPart'); renderCatalog(); if(wasSubTab)switchTab('subs');
@@ -2582,9 +2672,23 @@ function savePart(){
     const m=getModel(modelId); data.id=uid();
     if(type==='direct') m.directParts.push(data);
     else{const s=m.subsystems.find(s=>s.id===subId);s.parts.push(data)}
+    context={modelId,type,subId,isEdit:false};
     _captureFormSnapshot('modalPart');
     save(); closeModal('modalPart'); renderCatalog(); if(type==='sub')switchTab('subs');
     toast('Peça adicionada','success');
+  }
+  if(context){
+    const savedPart=context.isEdit
+      ? getPartById(context.modelId,context.type,context.subId,context.partId)
+      : getLastAddedPart(context.modelId,context.type,context.subId);
+    if(savedPart){
+      syncToGS('savePartMaster',{part:{...savedPart,modelId:context.modelId}});
+      syncToGS('replacePartSimilarities',{
+        partId:savedPart.id,
+        modelId:context.modelId,
+        similarities:savedPart.similarities
+      });
+    }
   }
   syncToGS('saveModel',{model:getModel(selModelId)});
 }
@@ -3067,14 +3171,26 @@ function promoverAoCatalogo(machineId){
           if(!existing.directParts) existing.directParts=[];
           existing.directParts.push({
             id:'dp-'+uid(),name:partName,ref:ps.ref,
+            partBrand:'',
+            supplierPrimary:'',
             interval:ps.interval||2000,qty:1,supplier:'',cost:0,
-            criticality:'normal',similarities:[],obs:''
+            criticality:'normal',similarities:[],obs:'',slot:''
           });
           merged++;
         }
       });
       save();
       syncToGS('saveModel',{model:existing});
+      existing.directParts.forEach(p=>{
+        if(!p.partBrand) p.partBrand='';
+        if(!p.supplierPrimary) p.supplierPrimary=p.supplier||'';
+        if(!Array.isArray(p.similarities)) p.similarities=[];
+        else p.similarities=p.similarities.map(s=>typeof s==='string'?{ref:s,brand:'',obs:''}:s);
+        syncToGS('savePartMaster',{part:{...p,modelId:existing.id}});
+        syncToGS('replacePartSimilarities',{
+          partId:p.id,modelId:existing.id,similarities:p.similarities
+        });
+      });
       toast(`${merged} referência(s) mesclada(s) ao catálogo`,'success');
     }
     closeModal('modalMachineParts');
@@ -3112,8 +3228,10 @@ function promoverAoCatalogo(machineId){
       id:'dp-'+uid(),
       name:ps.name||partIdToName[pid]||pid,
       ref:ps.ref||'',
+      partBrand:'',
+      supplierPrimary:'',
       interval:ps.interval||DEFAULT_INT[pid]||2000,
-      qty:1,supplier:'',cost:0,criticality:'normal',similarities:[],obs:''
+      qty:1,supplier:'',cost:0,criticality:'normal',similarities:[],obs:'',slot:''
     });
   });
 
@@ -3122,8 +3240,10 @@ function promoverAoCatalogo(machineId){
     Object.entries(partIdToName).forEach(([pid,name])=>{
       newModel.directParts.push({
         id:'dp-'+uid(),name,ref:'',
+        partBrand:'',
+        supplierPrimary:'',
         interval:DEFAULT_INT[pid]||2000,
-        qty:1,supplier:'',cost:0,criticality:'normal',similarities:[],obs:''
+        qty:1,supplier:'',cost:0,criticality:'normal',similarities:[],obs:'',slot:''
       });
     });
   }
@@ -3131,6 +3251,12 @@ function promoverAoCatalogo(machineId){
   db.models.push(newModel);
   save();
   syncToGS('saveModel',{model:newModel});
+  newModel.directParts.forEach(p=>{
+    syncToGS('savePartMaster',{part:{...p,modelId:newModel.id}});
+    syncToGS('replacePartSimilarities',{
+      partId:p.id,modelId:newModel.id,similarities:p.similarities||[]
+    });
+  });
   toast(`Modelo "${newModel.brand} ${newModel.model}" criado no catálogo`,'success');
   closeModal('modalMachineParts');
   selectModel(newModel.id);
