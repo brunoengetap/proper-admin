@@ -882,14 +882,16 @@ tr:hover td{background:var(--gray-50)}
   <div class="modal modal-lg" style="max-width:820px">
     <div class="modal-title" style="margin-bottom:10px">🔧 <span id="modalMachinePartsTitle">Peças da máquina</span></div>
     <div class="mdet-tabs">
-      <button class="mdet-tab active" onclick="switchMdetTab('resumo')">📋 Resumo</button>
-      <button class="mdet-tab" onclick="switchMdetTab('pecas')">🔧 Peças <span id="mdetPecasBadge"></span></button>
-      <button class="mdet-tab" onclick="switchMdetTab('fotos')">📷 Fotos</button>
+      <button class="mdet-tab active" data-tab="resumo" onclick="switchMdetTab('resumo')">📋 Resumo</button>
+      <button class="mdet-tab" data-tab="pecas" onclick="switchMdetTab('pecas')">🔧 Peças <span id="mdetPecasBadge"></span></button>
+      <button class="mdet-tab" data-tab="fotos" onclick="switchMdetTab('fotos')">📷 Fotos</button>
+      <button class="mdet-tab" data-tab="preventivas" onclick="switchMdetTab('preventivas')" id="mdetTabPreventivas">🔧 Preventivas</button>
     </div>
     <div id="modalMachinePartsBody" style="max-height:62vh;overflow-y:auto">
       <div class="mdet-panel active" id="mdetResumo"></div>
       <div class="mdet-panel" id="mdetPecas"></div>
       <div class="mdet-panel" id="mdetFotos"></div>
+      <div class="mdet-panel" id="mdetPreventivas"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeModal('modalMachineParts')">Fechar</button>
@@ -1517,6 +1519,7 @@ let _syncInProgress=false;
 let _lastSyncHash=_dbHash(db);
 let _lastSyncAt='';
 let _bootSilentSyncPending=true;
+let _bootSilentSyncDone=false;
 
 function normKey(v){ return String(v||'').trim().toLowerCase(); }
 
@@ -1630,8 +1633,9 @@ async function testGS(){
     const d=JSON.parse(txt);
     if(d.status==='ok'){
       setGsStatus('connected');
-      if(_bootSilentSyncPending){
+      if(_bootSilentSyncPending && !_bootSilentSyncDone){
         _bootSilentSyncPending=false;
+        _bootSilentSyncDone=true;
         Promise.resolve().then(()=>syncFromGS({ silent:true }));
       }
       return true;
@@ -2879,13 +2883,14 @@ const DEFAULT_PARTS = [
 let _mdetMachineId = null;
 
 function switchMdetTab(tab){
-  document.querySelectorAll('.mdet-tab').forEach((b,i)=>{
-    const tabs=['resumo','pecas','fotos'];
-    b.classList.toggle('active', tabs[i]===tab);
+  document.querySelectorAll('.mdet-tab').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===tab);
   });
   document.querySelectorAll('.mdet-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('mdet'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+  const panel = document.getElementById('mdet'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  if(panel) panel.classList.add('active');
   document.getElementById('mdetSaveBtn').style.display = tab==='pecas'?'':'none';
+  if(tab==='preventivas') renderMdetPreventivas();
 }
 
 function openMachineDetail(id){
@@ -2939,9 +2944,374 @@ function openMachineDetail(id){
     ? `<span style="background:${ws.level==='vencido'?'#fee2e2':'#fef3c7'};color:${ws.level==='vencido'?'#b91c1c':'#b45309'};font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px">${ws.count}</span>`
     : '';
 
+  // Limpar painel de preventivas — será carregado ao clicar na aba
+  document.getElementById('mdetPreventivas').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--text3)">Carregando...</div>';
+
+  // Mostrar aba Preventivas condicionada à feature flag
+  const tabBtn = document.getElementById('mdetTabPreventivas');
+  if(tabBtn) tabBtn.style.display = ENABLE_PREVENTIVA ? '' : 'none';
+
   // Resetar para aba resumo
   switchMdetTab('resumo');
   openModal('modalMachineParts');
+}
+
+async function renderMdetPreventivas(){
+  const eq = db.machines.find(m=>m.id===_mdetMachineId);
+  if(!eq) return;
+  const el = document.getElementById('mdetPreventivas');
+  if(!el) return;
+
+  el.innerHTML = renderFormNovaPreventiva(eq) +
+    '<div id="mdetHistoricoWrap">' +
+    '<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">Carregando histórico...</div>' +
+    '</div>';
+
+  await carregarHistoricoPreventivas(eq);
+}
+
+function getPreventivaStatusBadge(st){
+  if(st.level==='ok') return '<span class="badge-ok">✓ OK</span>';
+  if(st.level==='alerta') return '<span class="badge-alerta">⚠ '+st.label+'</span>';
+  if(st.level==='vencido') return '<span class="badge-vencido">⛔ '+st.label+'</span>';
+  if(st.level==='na') return '<span class="badge-na">N/A</span>';
+  return '<span class="badge-sem">Sem dados</span>';
+}
+
+function renderFormNovaPreventiva(eq){
+  const hoje = new Date().toISOString().slice(0,10);
+  const parts = Object.entries(eq.parts||{});
+  const rows = parts.map(([pid, part])=>{
+    const last = parseInt(part.lastChange)||0;
+    const interval = parseInt(part.interval)||0;
+    const next = last && interval ? (last + interval) : 0;
+    const st = getPartStatus(part, eq.hourTotal||0);
+    return `<tr>
+      <td>${part.name||pid}</td>
+      <td>${part.ref||'—'}</td>
+      <td>${last?last.toLocaleString('pt-BR')+'h':'—'}</td>
+      <td>${interval?interval.toLocaleString('pt-BR')+'h':'—'}</td>
+      <td>${next?next.toLocaleString('pt-BR')+'h':'—'}</td>
+      <td>${getPreventivaStatusBadge(st)}</td>
+      <td>
+        <select class="form-input" id="prevAcao_${pid}" onchange="onChangePrevAcao('${pid}', this.value)" style="min-width:120px">
+          <option value="">— selecionar —</option>
+          <option value="conferida">Conferida</option>
+          <option value="trocada">Trocada</option>
+          <option value="na">N/A</option>
+        </select>
+      </td>
+      <td><input class="form-input" type="text" id="prevNovaRef_${pid}" placeholder="Referência instalada" disabled></td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div style="font-size:16px;font-weight:700;margin-bottom:12px">Registrar visita / preventiva</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Data da visita</label>
+        <input class="form-input" type="date" id="prevData" value="${hoje}">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Horímetro atual</label>
+        <input class="form-input" type="number" id="prevHorimetro" placeholder="ex. 5200" value="${eq.hourTotal||''}">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Técnico responsável</label>
+        <input class="form-input" type="text" id="prevTecnico" placeholder="Nome do técnico">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Tipo</label>
+        <select class="form-input" id="prevTipo">
+          <option value="preventiva">Preventiva</option>
+          <option value="inspecao">Inspeção</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Observações gerais</label>
+      <textarea class="form-textarea" id="prevObs" rows="2" placeholder="Observações da visita"></textarea>
+    </div>
+    <div style="overflow-x:auto;margin-bottom:8px">
+      <table>
+        <thead><tr>
+          <th>Peça</th><th>Ref. atual</th><th>Última troca (h)</th><th>Intervalo (h)</th>
+          <th>Próxima (h)</th><th>Status</th><th>Ação</th><th>Nova ref.</th>
+        </tr></thead>
+        <tbody id="prevTableBody">
+          ${rows || '<tr><td colspan="8" style="color:var(--text3)">Nenhuma peça cadastrada para esta máquina.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin:8px 0 14px">
+      <button class="btn btn-secondary btn-sm" onclick="addPrevAvulsaRow()">+ Adicionar peça avulsa</button>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-primary" id="btnSalvarPreventiva" onclick="salvarPreventiva()">Salvar preventiva</button>
+    </div>
+  `;
+}
+
+function onChangePrevAcao(pid, acao){
+  const refEl = document.getElementById('prevNovaRef_'+pid);
+  if(!refEl) return;
+  if(acao==='trocada'){
+    refEl.disabled = false;
+  }else{
+    refEl.value = '';
+    refEl.disabled = true;
+  }
+}
+
+function addPrevAvulsaRow(){
+  const tbody = document.getElementById('prevTableBody');
+  if(!tbody) return;
+  const idx = tbody.querySelectorAll('.prev-avulsa-row').length + 1;
+  const tr = document.createElement('tr');
+  tr.className = 'prev-avulsa-row';
+  tr.innerHTML = `
+    <td colspan="8" style="background:#f8fafc">
+      <div style="display:grid;grid-template-columns:1.5fr 1fr 120px 1.2fr 140px 32px;gap:6px;align-items:center">
+        <input class="form-input avulsa-nome" type="text" placeholder="Nome da peça">
+        <input class="form-input avulsa-ref" type="text" placeholder="Referência">
+        <input class="form-input avulsa-interval" type="number" placeholder="Intervalo (h)">
+        <input class="form-input avulsa-obs" type="text" placeholder="Observação">
+        <select class="form-input avulsa-acao">
+          <option value="">— selecionar —</option>
+          <option value="conferida">Conferida</option>
+          <option value="trocada">Trocada</option>
+          <option value="na">N/A</option>
+        </select>
+        <button class="btn btn-danger btn-sm" title="Remover peça avulsa" onclick="this.closest('tr').remove()">×</button>
+      </div>
+    </td>`;
+  tr.dataset.avulsaIndex = String(idx);
+  tbody.appendChild(tr);
+}
+
+async function salvarPreventiva() {
+  const eq = db.machines.find(m => m.id === _mdetMachineId);
+  if (!eq) return;
+
+  const dataVal   = document.getElementById('prevData')?.value || '';
+  const horimetro = parseInt(document.getElementById('prevHorimetro')?.value) || 0;
+  const tecnico   = document.getElementById('prevTecnico')?.value.trim() || '';
+  const tipo      = document.getElementById('prevTipo')?.value || 'preventiva';
+  const obs       = document.getElementById('prevObs')?.value.trim() || '';
+
+  if (!dataVal) { toast('Informe a data da visita', 'error'); return; }
+  if (!horimetro) { toast('Informe o horímetro atual', 'error'); return; }
+
+  const parts = {};
+  let todasComAcao = true;
+
+  Object.entries(eq.parts || {}).forEach(([pid, ps]) => {
+    const acaoEl    = document.getElementById('prevAcao_' + pid);
+    const novaRefEl = document.getElementById('prevNovaRef_' + pid);
+    const acao      = acaoEl ? acaoEl.value : '';
+
+    if (!acao) { todasComAcao = false; return; }
+
+    parts[pid] = {
+      name:           ps.name || pid,
+      acao:           acao,
+      ref:            acao === 'trocada'
+                        ? (novaRefEl ? novaRefEl.value.trim() : '')
+                        : (ps.ref || ''),
+      refAnterior:    ps.ref || '',
+      interval:       ps.interval || 2000,
+      tipoReferencia: acao === 'trocada' && novaRefEl?.value?.trim()
+                        ? 'manual'
+                        : '',
+      obs:            ''
+    };
+
+    if (acao === 'trocada' && !parts[pid].ref) {
+      toast('Peça "' + (ps.name||pid) + '": informe a referência instalada', 'error');
+      todasComAcao = false;
+    }
+  });
+
+  document.querySelectorAll('.prev-avulsa-row').forEach((row, i) => {
+    const nome     = row.querySelector('.avulsa-nome')?.value?.trim();
+    const ref      = row.querySelector('.avulsa-ref')?.value?.trim();
+    const interval = parseInt(row.querySelector('.avulsa-interval')?.value) || 0;
+    const obsAv    = row.querySelector('.avulsa-obs')?.value?.trim();
+    const acao     = row.querySelector('.avulsa-acao')?.value;
+    if (!nome || !acao) return;
+    const avId = 'avulsa_' + i;
+    parts[avId] = {
+      name: nome, acao, ref: ref || '',
+      refAnterior: '', interval,
+      tipoReferencia: 'manual', obs: obsAv || ''
+    };
+  });
+
+  if (!todasComAcao) {
+    toast('Selecione uma ação para todas as peças', 'error');
+    return;
+  }
+
+  const visitId = 'VIS-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+  const payload = {
+    visit_id:   visitId,
+    machine_id: eq.id,
+    serial:     eq.serial || '',
+    tag:        eq.tag || '',
+    client:     eq.client || '',
+    branch:     eq.branch || '',
+    brand:      eq.brand || '',
+    model:      eq.model || '',
+    visitDate:  new Date(dataVal + 'T12:00:00').toISOString(),
+    hourTotal:  horimetro,
+    hpw:        eq.hpw || 0,
+    tech:       tecnico,
+    tipo:       tipo,
+    generalObs: obs,
+    parts:      parts
+  };
+
+  const btnSalvar = document.getElementById('btnSalvarPreventiva');
+  if(btnSalvar){
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = 'Salvando...';
+  }
+
+  try {
+    await syncToGS('savePreventiva', payload);
+
+    Object.entries(parts).forEach(([pid, ps]) => {
+      if (ps.acao !== 'trocada') return;
+      if (!eq.parts) eq.parts = {};
+      if (!eq.parts[pid]) eq.parts[pid] = {};
+      eq.parts[pid].lastChange  = horimetro;
+      eq.parts[pid].ref         = ps.ref;
+      eq.parts[pid].refAnterior = ps.refAnterior;
+    });
+    if (horimetro > (eq.hourTotal || 0)) eq.hourTotal = horimetro;
+    save();
+
+    const nTrocadas = Object.values(parts).filter(p => p.acao === 'trocada').length;
+    toast('Preventiva salva — ' + nTrocadas + ' peça(s) atualizada(s)', 'success');
+
+    await carregarHistoricoPreventivas(eq);
+    openMachineDetail(eq.id);
+    switchMdetTab('preventivas');
+    renderMachines();
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'error');
+  } finally {
+    const btn = document.getElementById('btnSalvarPreventiva');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Salvar preventiva';
+    }
+  }
+}
+
+async function carregarHistoricoPreventivas(eq) {
+  const wrap = document.getElementById('mdetHistoricoWrap');
+  if (!wrap) return;
+
+  if (!gsConnected) {
+    wrap.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--text3)">Conecte ao Google Sheets para ver o histórico.</div>';
+    return;
+  }
+
+  try {
+    const url = gsUrl + '?action=getVisitsByMachine' +
+                '&machine_id=' + encodeURIComponent(eq.id) +
+                '&key=' + _AUTH_HASH;
+    const r   = await fetch(url);
+    const txt = await r.text();
+    if (txt.trim().startsWith('<')) throw new Error('Resposta inválida do GAS');
+    const d   = JSON.parse(txt);
+    if (d.status !== 'ok') throw new Error(d.error || 'Erro desconhecido');
+
+    eq.visits = d.visits || [];
+    wrap.innerHTML = renderHistoricoPreventivas(d.visits || [], d.pecasLog || {});
+  } catch(e) {
+    wrap.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--red)">Erro ao carregar histórico: ' + e.message + '</div>';
+  }
+}
+
+function renderHistoricoPreventivas(visits, pecasLog) {
+  const items = (visits || []);
+  if(!items.length){
+    return `<div style="margin-top:8px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:8px">Histórico de visitas</div>
+      <div style="padding:10px;color:var(--text3);font-size:12px">Nenhuma visita registrada ainda para esta máquina.</div>
+    </div>`;
+  }
+
+  const cards = items.map((v, idx)=>{
+    const tipoRaw = (v.tipo || '').toLowerCase();
+    const isPrev = tipoRaw === 'preventiva';
+    const tipoLabel = isPrev ? 'Preventiva' : 'Inspeção';
+    const tipoStyle = isPrev
+      ? 'background:#dbeafe;color:#1d4ed8'
+      : 'background:#e5e7eb;color:#374151';
+    const dt = new Date(v.visitDate);
+    const dataFmt = Number.isNaN(dt.getTime())
+      ? (v.visitDate || '—')
+      : dt.toLocaleDateString('pt-BR');
+    const hour = parseInt(v.hourTotal)||0;
+    const visitId = v.visit_id || v.visitId || v.id || ('visit_'+idx);
+    const pecas = Array.isArray(pecasLog?.[visitId]) ? pecasLog[visitId] : [];
+    const trocadas = pecas.filter(p=>String(p.acao||'').toLowerCase()==='trocada');
+    const outras = pecas.filter(p=>String(p.acao||'').toLowerCase()!=='trocada');
+    const extraId = 'vparts_'+idx+'_'+String(visitId).replace(/[^a-z0-9_]/gi,'');
+
+    const trocadasHtml = trocadas.length
+      ? `<div style="margin-top:8px">
+          <div style="font-size:11px;font-weight:700;color:#0f766e;margin-bottom:4px">Peças trocadas</div>
+          ${trocadas.map(p=>{
+            const refNova = p.refNova || p.ref || '—';
+            const refAnt = p.refAnterior || '';
+            const era = refAnt && refAnt!==refNova ? ` <span style="color:var(--text3)">· era: ${refAnt}</span>` : '';
+            const hTroca = parseInt(p.hourTotal || v.hourTotal)||0;
+            return `<div style="font-size:12px;margin-bottom:2px">• <strong>${p.name||p.partName||'Peça'}</strong>: ${refNova}${era} <span style="color:var(--text3)">(${hTroca.toLocaleString('pt-BR')}h)</span></div>`;
+          }).join('')}
+        </div>`
+      : '<div style="margin-top:8px;font-size:12px;color:var(--text3)">Nenhuma peça trocada nesta visita.</div>';
+
+    const outrasHtml = outras.length
+      ? `<div style="margin-top:6px">
+          <a href="#" style="font-size:12px" onclick="toggleVisitParts('${extraId}',this);return false;">Ver todas as peças desta visita ▸</a>
+          <div id="${extraId}" style="display:none;margin-top:6px">
+            ${outras.map(p=>`<div style="font-size:12px;color:var(--text2)">• ${p.name||p.partName||'Peça'} — ${p.acao||'—'}</div>`).join('')}
+          </div>
+        </div>`
+      : '';
+
+    return `<div style="border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;background:#fff">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="${tipoStyle};font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px">${tipoLabel}</span>
+        <span style="font-size:12px;color:var(--text2)">${dataFmt}</span>
+        <span style="font-size:12px">Horímetro: <strong>${hour.toLocaleString('pt-BR')}h</strong></span>
+        <span style="font-size:12px;color:var(--text2)">Técnico: ${v.tech||'—'}</span>
+      </div>
+      ${trocadasHtml}
+      ${outrasHtml}
+      ${v.generalObs?`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:12px"><strong>Obs:</strong> ${v.generalObs}</div>`:''}
+    </div>`;
+  }).join('');
+
+  return `<div style="margin-top:8px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">Histórico de visitas</div>
+    ${cards}
+  </div>`;
+}
+
+function toggleVisitParts(id, link){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : '';
+  if(link) link.textContent = isOpen ? 'Ver todas as peças desta visita ▸' : 'Ocultar peças desta visita ▾';
 }
 
 function _getMachineWorst(eq){
@@ -3940,22 +4310,26 @@ showView('dashboard');
 // Etapa 1: injetar botão X e listener de overlay em todos os modais
 initModalSystem();
 
-// ── SINCRONIZAÇÃO AUTOMÁTICA ENTRE ABAS ──────────────────
-// Quando o campo (em outra aba) atualiza o localStorage,
-// o admin detecta e recarrega os dados automaticamente.
+// ── SINCRONIZAÇÃO ENTRE ABAS (SEM RE-RENDER DESNECESSÁRIO) ───────────────
+// Não faz polling: apenas reage ao evento nativo de storage.
 window.addEventListener('storage', function(e){
   if(e.key !== 'proper_admin_v2') return;
   if(!e.newValue) return;
+  if(_syncInProgress) return;
   try{
     const newDb = JSON.parse(e.newValue);
     if(!newDb || !newDb.machines) return;
+    const incomingHash = _dbHash(newDb);
+    if(incomingHash === _lastSyncHash) return;
+
     db = newDb;
+    _lastSyncHash = incomingHash;
+
     if(currentView==='dashboard')        renderDashboard();
     else if(currentView==='machines')    renderMachines();
     else if(currentView==='preventivas') renderPreventivas();
     else if(currentView==='clients')     renderClients();
     renderSidebar(document.getElementById('sidebarSearch')?.value||'');
-    toast('↓ Dados atualizados pelo campo','info');
   }catch(err){ console.warn('storage sync:', err); }
 });
 
@@ -3995,6 +4369,7 @@ async function loginEntrar(){
 setSyncHeaderStatus('pending');
 if(!gsUrl){
   _bootSilentSyncPending=false;
+  _bootSilentSyncDone=true;
 }
 
 </script>
