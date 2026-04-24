@@ -1509,6 +1509,7 @@ let currentSims=[]; // temp similarity list for part modal
 let currentPhotoTarget=null; // {type:'model'|'machine', id}
 let sidebarTab='models'; // 'models'|'machines'
 let currentView='catalog';
+const ENABLE_PREVENTIVA = true;
 
 let gsUrl=localStorage.getItem('proper_gs_url')||'';
 let gsConnected=false;
@@ -1672,15 +1673,27 @@ function calcPartStatus(lastChange, interval, hourTotal){
   return {status,remaining,next};
 }
 
+function getPartStatus(part, currentHour) {
+  if (!part || part.na) return { level: 'na', label: 'N/A', next: null };
+  const last = parseInt(part.lastChange) || 0;
+  const interval = parseInt(part.interval) || 0;
+  if (!interval) return { level: 'sem-dados', label: 'Sem intervalo', next: null };
+  const next = last + interval;
+  const alertThreshold = next - (interval * 0.1);
+  if (currentHour >= next) return { level: 'vencido', label: 'Vencida ' + (currentHour - next) + 'h atrás', next };
+  if (currentHour >= alertThreshold) return { level: 'alerta', label: 'Faltam ' + (next - currentHour) + 'h', next };
+  return { level: 'ok', label: 'Faltam ' + (next - currentHour) + 'h', next };
+}
+
 function getMachineWorstStatus(eq){
   const parts=_getEffectiveParts(eq);
   let countVencido=0,countAlerta=0,countSemDados=0;
   parts.forEach(p=>{
-    if(p.na) return;
-    const {status}=calcPartStatus(p.lastChange||0,p.interval,eq.hourTotal||0);
-    if(status==='vencido') countVencido++;
-    else if(status==='alerta') countAlerta++;
-    else if(status==='sem_dados') countSemDados++;
+    const st=getPartStatus(p, eq.hourTotal||0);
+    if(st.level==='na') return;
+    if(st.level==='vencido') countVencido++;
+    else if(st.level==='alerta') countAlerta++;
+    else if(st.level==='sem-dados') countSemDados++;
   });
   if(countVencido>0) return {level:'vencido',count:countVencido,label:`${countVencido} peça${countVencido>1?'s':''} vencida${countVencido>1?'s':''}`};
   if(countAlerta>0)  return {level:'alerta', count:countAlerta, label:`${countAlerta} peça${countAlerta>1?'s':''} em atenção`};
@@ -2198,20 +2211,20 @@ function renderCatalog(){
       ${machinesWithModel.length?`
       <div class="table-wrap">
         <table class="mach-table">
-          <thead><tr><th>TAG</th><th>Cliente</th><th>Série</th><th>Horímetro</th><th>Status</th><th></th></tr></thead>
-          <tbody>${machinesWithModel.map(eq=>{
+          <thead><tr><th>TAG</th><th>Cliente</th><th>Horímetro</th><th>Status preventiva</th></tr></thead>
+          <tbody>${machinesWithModel.slice(0,5).map(eq=>{
             const ws=getMachineWorstStatus(eq);
-            return`<tr>
+            return`<tr style="cursor:pointer" onclick="openMachineDetail('${eq.id}')">
               <td><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--blue-light);color:var(--blue-mid);padding:2px 7px;border-radius:4px">${eq.tag||'—'}</span></td>
               <td><div style="font-weight:600;font-size:12px">${eq.client||'—'}</div><div style="font-size:10px;color:var(--text3)">${eq.branch||eq.location||''}</div></td>
-              <td><span style="font-family:'IBM Plex Mono',monospace;font-size:11px">${eq.serial||'—'}</span></td>
               <td><span class="mach-hora">${(eq.hourTotal||0).toLocaleString('pt-BR')}h</span></td>
-              <td>${!ws?'<span class="badge-sem">Sem dados</span>':ws.level==='vencido'?`<span class="badge-vencido">⛔ ${ws.label}</span>`:ws.level==='alerta'?`<span class="badge-alerta">⚠ ${ws.label}</span>`:'<span class="badge-ok">✓ OK</span>'}</td>
-              <td><button class="btn btn-secondary btn-xs" onclick="openMachineDetail('${eq.id}')">Detalhes</button></td>
+              <td>${!ws?'<span class="badge-sem">Sem dados</span>':ws.level==='vencido'?`<span class="badge-vencido">⛔ ${ws.label}</span>`:ws.level==='alerta'?`<span class="badge-alerta">⚠ ${ws.label}</span>`:ws.level==='faltando'?`<span class="badge-sem">📋 ${ws.label}</span>`:'<span class="badge-ok">✓ OK</span>'}</td>
             </tr>`;
           }).join('')}</tbody>
         </table>
-      </div>`:`
+      </div>
+      ${machinesWithModel.length>5?`<div style="margin-top:8px;text-align:right"><a href="#" style="font-size:12px;color:var(--blue-mid);font-weight:600" onclick="event.preventDefault();_machFilter='';_machModelFilter='${modelKey(m.brand,m.model)}';showView('machines');renderMachines()">Ver todas (${machinesWithModel.length})</a></div>`:''}
+      `:`
       <div style="padding:14px;text-align:center;border:1px solid var(--border);border-radius:var(--radius);color:var(--text3);font-size:12px">
         Nenhuma máquina cadastrada com este modelo.
         <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="openModalMachine()">+ Cadastrar máquina</button>
@@ -2977,20 +2990,24 @@ function _buildPartsReadTable(eq, hourTotal, hpw){
 
   return `<div style="font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Status das Peças</div>
   <div class="table-wrap"><table>
-    <thead><tr><th>Peça</th><th>Intervalo</th><th>Últ. troca</th><th>Próx. troca</th><th>H. rest.</th><th>Dias rest.</th><th>Status</th></tr></thead>
+    <thead><tr><th>Peça</th><th>Ref.</th><th>Últ. troca (h)</th><th>Intervalo (h)</th><th>Próxima (h)</th><th>Status</th></tr></thead>
     <tbody>${parts.map(p=>{
-      if(p.na) return `<tr><td><div class="td-name">${p.name}</div></td><td colspan="5" style="color:var(--text3);font-size:11px">—</td><td>${statusBadge('n/a')}</td></tr>`;
-      const {status,remaining,next}=calcPartStatus(p.lastChange,p.interval,hourTotal);
-      const daysRem=(remaining!==null&&hpw>0)?Math.round(remaining/(hpw/7)):null;
-      const dStyle=daysRem!==null&&daysRem<=0?'color:var(--red);font-weight:700':daysRem!==null&&daysRem<=30?'color:var(--orange);font-weight:700':'';
+      const st=getPartStatus(p, hourTotal);
+      const next=(parseInt(p.lastChange)||0)+(parseInt(p.interval)||0);
+      const nextText=((parseInt(p.lastChange)||0)>0&&(parseInt(p.interval)||0)>0)?`${next.toLocaleString('pt-BR')}h`:'—';
+      const statusHtml=
+        st.level==='ok' ? '<span class="badge-ok">✓ OK</span>' :
+        st.level==='alerta' ? `<span class="badge-alerta">⚠ ${st.label}</span>` :
+        st.level==='vencido' ? `<span class="badge-vencido">⛔ ${st.label}</span>` :
+        st.level==='na' ? '<span class="badge-na">N/A</span>' :
+        '<span class="badge-sem">Sem dados</span>';
       return `<tr>
-        <td><div class="td-name">${p.name}</div>${p.ref?`<div class="td-ref">${p.ref}</div>`:''}</td>
-        <td>${p.interval?p.interval+'h':'—'}</td>
-        <td>${p.lastChange?p.lastChange+'h':'—'}</td>
-        <td>${next?next+'h':'—'}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px">${remaining!==null?remaining.toLocaleString('pt-BR')+'h':'—'}</td>
-        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;${dStyle}">${daysRem!==null?daysRem+'d':'—'}</td>
-        <td>${statusBadge(status)}</td>
+        <td><div class="td-name">${p.name}</div></td>
+        <td>${p.ref||'—'}</td>
+        <td>${p.lastChange?`${p.lastChange.toLocaleString('pt-BR')}h`:'—'}</td>
+        <td>${p.interval?`${p.interval.toLocaleString('pt-BR')}h`:'—'}</td>
+        <td>${nextText}</td>
+        <td>${statusHtml}</td>
       </tr>`;
     }).join('')}</tbody>
   </table></div>`;
@@ -3264,6 +3281,7 @@ function promoverAoCatalogo(machineId){
 }
 
 let _machFilter=''; // filtro de cliente ativo
+let _machModelFilter=''; // filtro de modelo vindo do catálogo
 
 function renderMachines(){
   const el=document.getElementById('viewMachines');
@@ -3283,7 +3301,8 @@ function renderMachines(){
   let machines=db.machines.filter(eq=>{
     const matchSearch=!search||(eq.client+eq.model+eq.brand+eq.serial+eq.tag).toLowerCase().includes(search);
     const matchClient=!_machFilter||eq.client===_machFilter;
-    return matchSearch&&matchClient;
+    const matchModel=!_machModelFilter||modelKey(eq.brand,eq.model)===_machModelFilter;
+    return matchSearch&&matchClient&&matchModel;
   });
 
   el.innerHTML=`
@@ -3291,11 +3310,15 @@ function renderMachines(){
       <div>
         <div style="font-size:18px;font-weight:700">Máquinas PGP</div>
         <div style="font-size:12px;color:var(--text2);margin-top:2px">
-          ${_machFilter?`Filtrando: <strong>${_machFilter}</strong> <button onclick="_machFilter='';renderMachines()" style="font-size:10px;border:none;background:none;color:var(--blue-mid);cursor:pointer;padding:0">✕ limpar</button>`:'Todos os equipamentos cadastrados'}
+          ${(_machFilter||_machModelFilter)?`Filtrando: <strong>${_machFilter||'Todos os clientes'}</strong>${_machModelFilter?` · <strong>${_machModelFilter.replace('::',' ')}</strong>`:''} <button onclick="_machFilter='';_machModelFilter='';renderMachines()" style="font-size:10px;border:none;background:none;color:var(--blue-mid);cursor:pointer;padding:0">✕ limpar</button>`:'Todos os equipamentos cadastrados'}
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <input type="text" id="machineSearchInput" class="form-input" placeholder="Buscar..." style="width:160px" oninput="renderMachines()" value="${search}">
+        <select id="machineClientFilter" class="form-input" style="width:220px" onchange="_machFilter=this.value;renderMachines()">
+          <option value="">Todos os clientes</option>
+          ${Object.keys(byClient).sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'})).map(c=>`<option value="${c.replace(/"/g,'&quot;')}" ${_machFilter===c?'selected':''}>${c} (${byClient[c].length})</option>`).join('')}
+        </select>
         <button class="btn btn-primary" onclick="openModalMachine()">+ Nova máquina</button>
       </div>
     </div>
@@ -3320,15 +3343,6 @@ function renderMachines(){
         <div class="stat-val">${nClients}</div>
         <div class="stat-lbl">Clientes ativos</div>
       </div>
-    </div>
-
-    <!-- Filtros por cliente -->
-    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">
-      <button class="prev-filter-btn ${!_machFilter?'active':''}" onclick="_machFilter='';renderMachines()">Todos</button>
-      ${Object.keys(byClient).sort().map(c=>`
-        <button class="prev-filter-btn ${_machFilter===c?'active':''}" onclick="_machFilter='${c.replace(/'/g,"\\'")}';renderMachines()">
-          ${c} <span style="opacity:.7">(${byClient[c].length})</span>
-        </button>`).join('')}
     </div>
 
     <!-- Tabela densa -->
